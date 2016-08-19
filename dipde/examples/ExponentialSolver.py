@@ -59,13 +59,14 @@ def get_firing_rates(firingRateExt, ampDistInt, ampDistExt, tau, vth, nsynInt, n
             for i in range(0, len(ampRate)):
                 amp = ampRate[i][0]
                 rate = ampRate[i][1]
-                if (x <= 1 / amp):
+                if ( 1. - amp*x >= 0):
                     ci = (1. - amp * x) ** (tau * rate)
                 else:
-                    ci = np.cos(tau * rate * np.pi) * (np.abs(1. - amp * x) ** (tau * rate))
+                    ci = np.cos(tau * rate * np.pi) * (np.abs(1. - amp * x) ** (tau * rate)) + 1j*np.sin(tau * rate * np.pi) * (np.abs(1. - amp * x) ** (tau * rate))
                 prod *= ci
             cn = np.exp(vth * x) / (1.0 - positiveInput * x) - 1.0
             prod *= cn
+            prod = prod.real
             return prod
         return f
 
@@ -87,6 +88,7 @@ def get_firing_rates(firingRateExt, ampDistInt, ampDistExt, tau, vth, nsynInt, n
         for p in range(1, len(positiveInputs)):
             for j in range(0, len(positiveInputs)):
                 A[p, j] = spint.quad(funclist[j], 1./positiveInputs[p-1], 1./positiveInputs[p])[0]
+        print A.dtype
         b = np.zeros((len(positiveInputs), 1))
         b[0,0] = 1
         print (A, i)
@@ -107,6 +109,25 @@ def get_firing_rates(firingRateExt, ampDistInt, ampDistExt, tau, vth, nsynInt, n
 # ampDistInt = np.array([[0]])
 
 def predict(network):
+    # A1real = np.array([[1.60243717, 1.30141539], [-0.02895426, 0.00341534]])
+    # A2real = np.array([[4.81949542e-01, 4.39535128e-01], [-1.20117905e-04, 1.55559332e-05]])
+    # A1complex = np.array([[ 0.,  0.], [-0.03986142,  0.00470191]])
+    # These results were from before I caught the bugs with complex numbers seeping into the bounds of my solver
+    # A1real = np.array([[ 1.57428255,  1.28064868], [-0.02705147,  0.00324178]])
+    # A2real = np.array([[  4.73937169e-01,   4.32438388e-01], [ -9.70105022e-05,   1.27639012e-05]])
+    # A1complex = np.array([[ 0.22778376,  0.18529773], [-0.04236884,  0.00507738]])
+    # A2complex = np.array([[  6.85742164e-02,   6.25697361e-02], [ -7.32731265e-04,   9.64070952e-05]])
+    # b = np.zeros((2, 1))
+    # b[0, 0] = 1
+    # rightrate1 = npla.solve(A1real, b)
+    # rightrate2 = npla.solve(A2real, b)
+    # print 'verifying that it solves Ax = b'
+    # print A1real.dot(rightrate1)
+    # print rightrate1.sum()
+    # print rightrate2.sum()
+    # print A1complex.dot(rightrate1)
+    # print A2complex.dot(rightrate2)
+
     internalList = []
     externalList = []
     internalConnections = []
@@ -159,8 +180,17 @@ def predict(network):
     print ampDistInt
     print nsynInt
     print nsynExt
+    # x0 = np.ones(ampDistInt.shape[0])
+    # for p in internalList:
+    #     x0[pop_to_ind_int[p]] = p.firing_rate_record[len(p.firing_rate_record) - 1]
     rates = get_firing_rates(firingRateExt, ampDistInt, ampDistExt, tau, vth, nsynInt, nsynExt)
-    return rates
+    for p in internalList:
+        #        print 'predicted for layer ' + str(p.metadata['layer']) + ' cell type ' + p.metadata['celltype']
+        print 'predicted for element ' + str(pop_to_ind_int[p])
+        print rates[pop_to_ind_int[p]]
+        print 'simulation result: '
+        print p.firing_rate_record[len(p.firing_rate_record) - 1]
+    return (rates, pop_to_ind_int)
     # print rates
     # for p in internalList:
 
