@@ -232,8 +232,15 @@ def descretize(rv, N=25):
     eps = np.finfo(float).eps
     y_list = np.linspace(eps,1-eps,N+1)
     x_list = rv.ppf(y_list)
-    vals = (x_list[1:]+x_list[:-1])/2
+
+    def mu(x):
+        return x*rv.pdf(x)
+
     probs = np.diff(y_list)
+    vals = np.zeros(len(probs))
+    for ii, xl_xr in enumerate(zip(x_list[:-1], x_list[1:])):
+        xl,xr = xl_xr
+        vals[ii] = spi.quad(mu, xl, xr)[0]/probs[ii]
 
     return vals, probs
  
