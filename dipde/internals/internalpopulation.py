@@ -75,7 +75,7 @@ class InternalPopulation(object):
     """
     
     def __init__(self, rank=0,
-                       tau_m={'distribution':'delta', 'weight':0.02},
+                       tau_m={'distribution':'delta', 'loc':0.02},
                        v_min=-.1,
                        v_max=.02,
                        dv=.0001,
@@ -85,7 +85,7 @@ class InternalPopulation(object):
                        approx_order=None,
                        tol=1e-14,
                        norm=np.inf,
-                       p0={'distribution':'delta', 'weight':0.},
+                       p0={'distribution':'delta', 'loc':0.},
                        metadata={},
                        firing_rate_record=[],
                        t_record=[],
@@ -96,7 +96,7 @@ class InternalPopulation(object):
         # Store away inputs:
         self.rank = 0
         self.tau_m = tau_m
-        self.p0 = p0 
+        self.p0 = p0
         self.v_min = v_min
         self.v_max = v_max
         self.dv = dv
@@ -384,7 +384,7 @@ class InternalPopulation(object):
     def gid(self):
         return self.simulation.gid_dict[self]
     
-    def plot_probability_distribution(self, ax=None):
+    def plot_probability_distribution(self, ax=None, xlim=None, ylim=None, xlabel='Voltage (Volts)', ylabel='PMF[Voltage]', title=None, **kwargs):
         '''Convenience method to plot voltage distribution.
         
         Parameters
@@ -395,15 +395,37 @@ class InternalPopulation(object):
         '''
         
         import matplotlib.pyplot as plt
-        
+
+        show = kwargs.pop('show', False)
+
         if ax == None:
             fig = plt.figure()
             ax = fig.add_subplot(1, 1, 1)
             
-        ax.plot(self.edges[:-1], self.pv)
+        ax.plot(self.edges[:-1], self.pv, **kwargs)
+
+        if ylim is None:
+            ax.set_ylim(bottom=0, top=np.max(self.pv)*1.1)
+        else:
+            ax.set_ylim(ylim)
+
+        if xlim is None:
+            ax.set_xlim(self.edges[:-1][0], self.edges[:-1][-1])
+        else:
+            ax.set_xlim(xlim)
+
+        ax.set_xlabel(xlabel)
+        ax.set_ylabel(ylabel)
+
+        if not title is None:
+            ax.set_title(title)
+
+        if show == True:
+            plt.show()
+
         return ax
     
-    def plot(self, ax=None, **kwargs):
+    def plot(self, ax=None, xlim=None, ylim=None, xlabel='Time (Seconds)', ylabel='Firing Rate (Hz)', title=None, **kwargs):
         '''Convenience method to plot firing rate history.
         
         Parameters
@@ -423,7 +445,22 @@ class InternalPopulation(object):
         if self.firing_rate_record is None or self.t_record is None:
             raise RuntimeError('Firing rate not recorded on gid: %s' % self.gid)  # pragma: no cover
         ax.plot(self.t_record, self.firing_rate_record, **kwargs)
-        ax.set_ylim(bottom=0, top=np.max(self.firing_rate_record)*1.1)
+        if ylim is None:
+            ax.set_ylim(bottom=0, top=np.max(self.firing_rate_record)*1.1)
+        else:
+            ax.set_ylim(ylim)
+
+        if xlim is None:
+            ax.set_xlim(self.t_record[0], self.t_record[-1])
+        else:
+            ax.set_xlim(xlim)
+
+        ax.set_xlabel(xlabel)
+        ax.set_ylabel(ylabel)
+
+        if not title is None:
+            ax.set_title(title)
+
         if show == True:
             plt.show()
         

@@ -101,7 +101,7 @@ def test_zmq_callback():
     
 
 
-def singlepop(steady_state, tau_m=.02, p0=((0.,),(1.,)), weights={'distribution':'delta', 'weight':.005}, bgfr=100, network_update_callback=lambda s: None, update_method='approx', simulation_configuration=None, tol=None):
+def singlepop(steady_state, tau_m=.02, p0=((0.,),(1.,)), weights={'distribution':'delta', 'loc':.005}, bgfr=100, network_update_callback=lambda s: None, update_method='approx', simulation_configuration=None, tol=None):
     
     # Settings:
     t0 = 0.

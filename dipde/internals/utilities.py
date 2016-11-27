@@ -174,7 +174,7 @@ def assert_probability_mass_conserved(pv, tol=1e-12):
         raise Exception('Probability mass below threshold: %s' % (np.abs(pv).sum() - 1))    # pragma: no cover
         
 def discretize_if_needed(curr_input):
-    
+
     if isinstance(curr_input, (sps._distn_infrastructure.rv_frozen,)):
         vals, probs = descretize(curr_input)
     elif isinstance(curr_input, (tuple, list)) and len(curr_input) == 2 and isinstance(curr_input[0], (sps._distn_infrastructure.rv_frozen,)) and isinstance(curr_input[1], (int,)):
@@ -187,9 +187,21 @@ def discretize_if_needed(curr_input):
         return curr_input
     elif isinstance(curr_input, (dict,)):
         if curr_input['distribution'] == 'delta':
-            vals, probs = np.array([curr_input['weight']]), np.array([1.])
+            vals, probs = np.array([curr_input['loc']]), np.array([1.])
         else:
-            raise NotImplementedError # pragma: no cover
+            curr_dist_name = curr_input.pop('distribution')
+            N = curr_input.pop('N', None)
+            distribution_as_sps = getattr(sps, curr_dist_name)(**curr_input)
+            if N is None and isinstance(distribution_as_sps, sps._distn_infrastructure.rv_frozen):
+                return discretize_if_needed(distribution_as_sps)
+            elif (not N is None) and isinstance(distribution_as_sps, sps._distn_infrastructure.rv_frozen):
+                return discretize_if_needed((distribution_as_sps, N))
+            else:
+                return distribution_as_sps
+
+
+
+
     elif isinstance(curr_input,str):
         return discretize_if_needed(json.loads(curr_input))
     
