@@ -14,7 +14,7 @@ def get_leak_matrix(internal_population, sparse=False):
     if sparse == False:
         return internal_population_copy.leak_flux_matrix_dict['dense'].copy()
     else:
-        return spsp.csr_matrix(internal_population_copy.leak_flux_matrix_dict['dense'])
+        return spsp.csc_matrix(internal_population_copy.leak_flux_matrix_dict['dense'])
 
     
     
@@ -34,7 +34,7 @@ def get_connection_flux_matrices(connection, sparse=False):
     if sparse == False:
         flux_matrix = conn_dist.flux_matrix_dict['dense'].copy()
     else:
-        flux_matrix = spsp.csr_matrix(conn_dist.flux_matrix_dict['dense'])
+        flux_matrix = spsp.csc_matrix(conn_dist.flux_matrix_dict['dense'])
     flux_vector = conn_dist.threshold_flux_vector.copy()
      
     return flux_matrix, flux_vector
