@@ -33,10 +33,16 @@ class PublishCallbackConnect(PublishCallback):
         
 class CallbackSubscriber(object): 
     
-    def __init__(self, port, receive_callback=None): 
-        self.port = port  
-        self.socket = context.socket(zmq.SUB) 
-        self.socket.bind("tcp://*:%s" % self.port) 
+    def __init__(self, port=None, receive_callback=None):
+
+        self.socket = context.socket(zmq.SUB)
+        if port is None:
+            self.port = self.socket.bind_to_random_port('tcp://*', min_port=6001, max_port=6004, max_tries=100)
+
+        else:
+            self.socket.bind("tcp://*:%s" % port)
+            self.port = port
+
         self.socket.setsockopt(zmq.SUBSCRIBE, 'test')
         
         if receive_callback is None:
@@ -52,14 +58,18 @@ class CallbackSubscriber(object):
             self.receive_callback(received_message)
 
 class CallbackSubscriberThread(threading.Thread): 
-    def __init__(self, port): 
-        super(self.__class__, self).__init__() 
-        self.daemon = True 
-        self.port = port  
+    def __init__(self, port=None):
+        super(self.__class__, self).__init__()
+        self.subscriber = CallbackSubscriber(port)
+        self.daemon = True
 
-    def run(self): 
-        self.subscriber = CallbackSubscriber(self.port) 
-        self.subscriber.run() 
+    def run(self, port=None):
+
+        self.subscriber.run()
+
+    @property
+    def port(self):
+        return self.subscriber.port
 
 
 class RequestFiringRate(object):
@@ -77,11 +87,21 @@ class RequestFiringRate(object):
     
 class ReplyFiringRateServer(object):
     
-    def __init__(self, port, reply_function):
-        self.port = port
-        self.reply_function = reply_function
+    def __init__(self, reply_function, port=None):
+
         self.socket = context.socket(zmq.REP)
-        self.socket.bind("tcp://*:%s" % self.port)
+        if port is None:
+            self.port = self.socket.bind_to_random_port('tcp://*', min_port=6001, max_port=6004, max_tries=100)
+
+        else:
+            self.socket.bind("tcp://*:%s" % port)
+            self.port = port
+
+
+
+        self.reply_function = reply_function
+
+
         
     def run(self):
         
@@ -94,14 +114,19 @@ class ReplyFiringRateServer(object):
         self.socket.send('DOWN')
 
 class ReplyServerThread(threading.Thread):
-    def __init__(self, port, reply_function):
+
+    def __init__(self, reply_function, port=None):
         super(self.__class__, self).__init__()
         self.daemon = True
-        self.port = port
         self.reply_function = reply_function
-    
-    def run(self):
-        self.server = ReplyFiringRateServer(self.port, self.reply_function)
+        self.server = ReplyFiringRateServer(self.reply_function, port=port)
+
+
+    def run(self, port=None):
         self.server.run()
+
+    @property
+    def port(self):
+        return self.server.port
 
 
