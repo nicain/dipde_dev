@@ -1,4 +1,4 @@
-name: dipde_0.1.0
+name: dipde_0.1.1
 dependencies:
   - matplotlib=1.4.*
   - python=2.7
@@ -6,4 +6,4 @@ dependencies:
   - pytest=2.6.*
   - setuptools=7.*
   - scipy=0.14.*
-  - sympy=0.7.*
+  - sympy=1.0.*

@@ -16,7 +16,7 @@
 import sympy.parsing.sympy_parser as symp
 from sympy.utilities.lambdify import lambdify
 from sympy.abc import t as sym_t
-
+from sympy import Piecewise
 
 class ExternalPopulation(object):
     '''External (i.e. background) source for connections to Internal Populations.
@@ -49,7 +49,10 @@ class ExternalPopulation(object):
         
         self.firing_rate_string = str(firing_rate)
         self.closure = lambdify(sym_t,symp.parse_expr(self.firing_rate_string))
-        
+
+        self.closure = lambdify(sym_t, symp.parse_expr(self.firing_rate_string, local_dict={
+            'Heaviside': lambda x: Piecewise((0, x < 0), (1, x > 0), (.5, True))}))
+
         self.record = record
         self.type = "external"
         
