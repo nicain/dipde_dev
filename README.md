@@ -1,4 +1,4 @@
-[![Build Status](https://travis-ci.org/AllenInstitute/dipde.svg?branch=master)](https://travis-ci.org/AllenInstitute/dipde)
+[![Build Status](https://travis-ci.org/nicain/dipde_dev.svg?branch=master)](https://travis-ci.org/nicain/dipde_dev)
 
 [![Join the chat at https://gitter.im/dipde/Lobby](https://badges.gitter.im/dipde/Lobby.svg)](https://gitter.im/dipde/Lobby?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
 
