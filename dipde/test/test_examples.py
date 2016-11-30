@@ -28,19 +28,19 @@ def test_singlepop_exponential_distribution():
     t, y = example(show=False)
 
     np.testing.assert_almost_equal(t[-1], .1)
-    np.testing.assert_almost_equal(y[-1], 8.6633532147226759)
+    np.testing.assert_almost_equal(y[-1], 8.6661023435049493)
     
 def test_excitatory_inhibitory():
     from dipde.examples.excitatory_inhibitory import example
     t, y = example(show=False)
 
     np.testing.assert_almost_equal(t[-1], .1)
-    np.testing.assert_almost_equal(y[-1], 0.90731622281068436)
+    np.testing.assert_almost_equal(y[-1], 0.90725590501763964)
     
 
 if __name__ == "__main__":                      # pragma: no cover
-    test_singlepop()                            # pragma: no cover
-    test_singlepop_sine()                       # pragma: no cover
+#     test_singlepop()                            # pragma: no cover
+#     test_singlepop_sine()                       # pragma: no cover
     test_singlepop_recurrent()                  # pragma: no cover
-    test_singlepop_exponential_distribution()   # pragma: no cover
-    test_excitatory_inhibitory()                # pragma: no cover
+#     test_singlepop_exponential_distribution()   # pragma: no cover
+#     test_excitatory_inhibitory()                # pragma: no cover

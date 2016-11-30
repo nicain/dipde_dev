@@ -18,6 +18,8 @@ import scipy.linalg as spla
 import scipy.stats as sps
 import scipy.integrate as spi
 import bisect
+import warnings
+import json
 
 def fraction_overlap(a1, a2, b1, b2):
     '''Calculate the fractional overlap between range (a1,a2) and (b1,b2).
@@ -75,29 +77,34 @@ def redistribute_probability_mass(A, B):
 
 def leak_matrix(v, tau):
     'Given a list of edges, construct a leak matrix with time constant tau.'
-    
+
     zero_bin_ind_list = get_zero_bin_list(v)
     
     # Initialize:
     A = np.zeros((len(v)-1,len(v)-1))
-
-    # Positive leak:
-    delta_w_ind = -1
-    for source_ind in np.arange(max(zero_bin_ind_list)+1, len(v)-1):
-        target_ind = source_ind + delta_w_ind
-        dv = v[source_ind+1]-v[source_ind]
-        bump_rate = v[source_ind+1]/(tau*dv)
-        A[source_ind, source_ind] -= bump_rate
-        A[target_ind, source_ind] += bump_rate
+    for curr_tau, curr_prob in zip(tau.xk, tau.pk):
     
-    # Negative leak:
-    delta_w_ind = 1
-    for source_ind in np.arange(0, min(zero_bin_ind_list)):
-        target_ind = source_ind + delta_w_ind
-        dv = v[source_ind]-v[target_ind]
-        bump_rate = v[source_ind]/(tau*dv)
-        A[source_ind, source_ind] -= bump_rate
-        A[target_ind, source_ind] += bump_rate
+        A_tmp = np.zeros((len(v)-1,len(v)-1))
+
+        # Positive leak:
+        delta_w_ind = -1
+        for source_ind in np.arange(max(zero_bin_ind_list)+1, len(v)-1):
+            target_ind = source_ind + delta_w_ind
+            dv = v[source_ind+1]-v[source_ind]
+            bump_rate = v[source_ind+1]/(curr_tau*dv)
+            A_tmp[source_ind, source_ind] -= bump_rate
+            A_tmp[target_ind, source_ind] += bump_rate
+        
+        # Negative leak:
+        delta_w_ind = 1
+        for source_ind in np.arange(0, min(zero_bin_ind_list)):
+            target_ind = source_ind + delta_w_ind
+            dv = v[source_ind]-v[target_ind]
+            bump_rate = v[source_ind]/(curr_tau*dv)
+            A_tmp[source_ind, source_ind] -= bump_rate
+            A_tmp[target_ind, source_ind] += bump_rate
+        
+        A += curr_prob*A_tmp
         
     return A
     
@@ -158,39 +165,63 @@ def get_v_edges(v_min, v_max, dv):
     
     return edges
 
-def assert_probability_mass_conserved(pv):
+def assert_probability_mass_conserved(pv, tol=1e-12):
     'Assert that probability mass in control nodes sums to 1.'
     
     try:
-        assert np.abs(np.abs(pv).sum() - 1) < 1e-12
+        assert np.abs(np.abs(pv).sum() - 1) < tol
     except:                                                                                 # pragma: no cover
         raise Exception('Probability mass below threshold: %s' % (np.abs(pv).sum() - 1))    # pragma: no cover
         
-
-
-def descretize(distribution, N, loc=0, scale=1, shape=[]):
-    'Compute a discrete approzimation to a scipy.stats continuous distribution.'
- 
-    x_list = np.linspace(0,1,N+1)
+def discretize_if_needed(curr_input):
     
-    rv = sps.expon(*shape, loc=loc, scale=scale)
-    y = np.zeros(len(x_list))
-    for ii, x in enumerate(x_list):
-        y[ii] = rv.ppf(x)
+    if isinstance(curr_input, (sps._distn_infrastructure.rv_frozen,)):
+        vals, probs = descretize(curr_input)
+    elif isinstance(curr_input, (tuple, list)) and len(curr_input) == 2 and isinstance(curr_input[0], (sps._distn_infrastructure.rv_frozen,)) and isinstance(curr_input[1], (int,)):
+        vals, probs = descretize(curr_input[0], N=curr_input[1])
+    elif isinstance(curr_input, (float, int)):
+        vals, probs = np.array([float(curr_input)]), np.array([1])
+    elif isinstance(curr_input, (tuple, list)) and len(curr_input) == 2 and isinstance(curr_input[0], (tuple, list, np.ndarray)) and isinstance(curr_input[1], (tuple, list, np.ndarray)):
+        vals, probs = map(np.array, curr_input)
+    elif isinstance(curr_input, (sps._distn_infrastructure.rv_discrete, )):
+        return curr_input
+    elif isinstance(curr_input, (dict,)):
+        if curr_input['distribution'] == 'delta':
+            vals, probs = np.array([curr_input['weight']]), np.array([1.])
+        else:
+            raise NotImplementedError # pragma: no cover
+        
+    else:
+        
+        raise ValueError("Unrecognized curr_input format: input=%s" % (curr_input,)) # pragma: no cover
+        
+    # Double-check inputs with more helpful error messages:
+    try:
+        for val in probs:
+            assert val >= 0
+    except:                                                                         # pragma: no cover
+        raise ValueError("Probability values must be positive: probs=%s" % (probs,))# pragma: no cover
     
-    mean = np.zeros(len(x_list)-1)
-    height = np.zeros(len(x_list)-1)
-    a = np.zeros(len(x_list)-1)
-    for ii, yl_yr in enumerate(zip(y[:-1],y[1:])):
-        yl, yr = yl_yr
-        height[ii] = rv.cdf(yr) - rv.cdf(yl)
+    assert_probability_mass_conserved(probs, 1e-15)
+    if len(vals) == len(probs):
+        pass
+    elif len(vals) == len(probs)+1:
+        vals = (np.array(vals[1:]) + np.array(vals[:-1]))/2
+    else:                                                                         # pragma: no cover
+        raise ValueError("Length of vals and probs not consistent with a probability distribution")
+    
+    return sps.rv_discrete(values=(vals, probs))
         
-        def mu(x):
-            return x*rv.pdf(x)
-        mean[ii] = spi.quad(mu, yl, yr)[0]
-        a[ii] = mean[ii]/height[ii]
-        
-    return a, height
+def descretize(rv, N=25):
+    'Compute a discrete approximation to a scipy.stats continuous distribution.'
+
+    eps = np.finfo(float).eps
+    y_list = np.linspace(eps,1-eps,N+1)
+    x_list = rv.ppf(y_list)
+    vals = (x_list[1:]+x_list[:-1])/2
+    probs = np.diff(y_list)
+
+    return vals, probs
  
 def exact_update_method(J, pv, dt=.0001):
     'Given a flux matrix, pdate probabilty vector by computing the matrix exponential.'
@@ -199,6 +230,10 @@ def exact_update_method(J, pv, dt=.0001):
     pv = np.dot(spla.expm(J*dt), pv)
     assert_probability_mass_conserved(pv)
     return pv
+
+def dot(A,b):
+    return np.dot(A,b)
+#     return np.sum(A*b,axis=1)
 
 def approx_update_method_tol(J, pv, tol=2.2e-16, dt=.0001, norm='inf'):
     'Approximate the effect of a matrix exponential, with residual smaller than tol.'
@@ -212,15 +247,16 @@ def approx_update_method_tol(J, pv, tol=2.2e-16, dt=.0001, norm='inf'):
     
     while curr_err > tol:
         counter += 1
-        curr_del = J.dot(curr_del)/counter
+        curr_del = dot(J,curr_del)/counter
         pv_new += curr_del
         curr_err = spla.norm(curr_del, norm)
 
-    
+    # Normalization based on known properties, to prevent rounding error:
+
     try:
         assert_probability_mass_conserved(pv)
     except:                                                                                                                                                     # pragma: no cover
-        raise Exception("Probabiltiy mass error (p_sum=%s) at tol=%s; consider higher order, decrease dt, or increase dv" % (np.abs(pv).sum(), tol))            # pragma: no cover
+        raise Exception("Probability mass error (p_sum=%s) at tol=%s; consider higher order, decrease dt, or increase dv" % (np.abs(pv).sum(), tol))            # pragma: no cover
     
     return pv_new
 
@@ -233,7 +269,7 @@ def approx_update_method_order(J, pv, dt=.0001, approx_order=2):
     pv_new = pv
     for curr_order in range(approx_order):
         coeff *= curr_order+1
-        curr_del = J.dot(curr_del*dt)
+        curr_del = np.dot(J,curr_del)*dt
         pv_new += (1./coeff)*curr_del
     
     try:
@@ -242,4 +278,34 @@ def approx_update_method_order(J, pv, dt=.0001, approx_order=2):
         raise Exception("Probabiltiy mass error (p_sum=%s) at approx_order=%s; consider higher order, decrease dt, or increase dv" % (np.abs(pv).sum(), approx_order))  # pragma: no cover
 
     return pv_new
+
+def get_pv_from_p0(p0, edges):
+    
+    pv = p0.cdf(edges[1:]) - p0.cdf(edges[:-1]) 
+    pv[0] += p0.cdf(edges[0])
+    pv[-1] += 1-p0.cdf(edges[-1])
+    
+    return pv 
+
+class DefaultSynchronizationHarness(object):
+    
+    def __init__(self, ):
+        self.rank = 0
+    
+    def gid_to_rank(self, gid): return 0
+        
+    def null_fcn(self, *args, **kwargs): pass
+        
+    def __getattr__(self, *args, **kwargs): return self.null_fcn
+
+def compare_dicts(o1_dict, o2_dict):
+    
+    for key, o1_value in o1_dict.items():
+        assert o2_dict[key] == o1_value
+        
+def check_metadata(metadata):
+    try:
+        compare_dicts(metadata, json.loads(json.dumps(metadata)))
+    except: # pragma: no cover
+        raise RuntimeError('Metadata cannot be marshalled') # pragma: no cover
     

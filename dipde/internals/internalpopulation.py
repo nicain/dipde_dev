@@ -14,8 +14,14 @@
 # You should have received a copy of the GNU General Public License
 # along with dipde.  If not, see <http://www.gnu.org/licenses/>.
 
+import bisect
 import numpy as np
+import scipy.stats as sps
+import json
+from dipde.interfaces.pandas import to_df
 from dipde.internals import utilities as util
+import logging
+logger = logging.getLogger(__name__)
 
 class InternalPopulation(object):
     """Population density class
@@ -66,40 +72,55 @@ class InternalPopulation(object):
         Matrix that defines the flux between voltage bins.
     """
     
-    def __init__(self, tau_m=.02,
+    def __init__(self, rank=0,
+                       tau_m={'distribution':'delta', 'weight':0.02},
                        v_min=-.1,
                        v_max=.02,
                        dv=.0001,
                        record=True,
-                       curr_firing_rate=0.0,
+                       initial_firing_rate=0.0,
                        update_method='approx',
                        approx_order=None,
                        tol=1e-12,
                        norm=np.inf,
+                       p0={'distribution':'delta', 'weight':0.},
+                       metadata={},
+                       firing_rate_record=[],
+                       t_record=[],
+                       update_callback=lambda s:None, 
+                       initialize_callback=lambda s:None,
                        **kwargs):
         
         # Store away inputs:
+        self.rank = 0
         self.tau_m = tau_m
+        self.p0 = p0 
         self.v_min = v_min
         self.v_max = v_max
         self.dv = dv
         self.record = record
-        self.curr_firing_rate = curr_firing_rate
+        self.curr_firing_rate = initial_firing_rate
         self.update_method = update_method
         self.approx_order = approx_order
         self.tol = tol
         self.norm = norm
-        self.type = "internal"
-        
+        self.update_callback = update_callback
+        self.initialize_callback = initialize_callback
+        self.firing_rate_record = [x for x in firing_rate_record]
+        self.t_record = [x for x in t_record]
+        assert len(self.firing_rate_record) == len(self.t_record)
+
         # Additional metadata:
-        self.metadata = kwargs
+        util.check_metadata(metadata)
+        self.metadata = metadata
         
         # Defined in initialization:
         self.edges = None
         self.pv = None
-        self.firing_rate_record = None
-        self.t_record = None
         self.leak_flux_matrix = None
+        
+        for key in kwargs.keys():
+            assert key in ['class', 'module']
         
     def initialize(self):
         '''Initialize the population at the beginning of a simulation.
@@ -119,8 +140,9 @@ class InternalPopulation(object):
 
         self.initialize_edges()
         self.initialize_probability()  # TODO: different initialization options
-        self.initialize_total_input_dict()
+
         if self.record == True: self.initialize_firing_rate_recorder()
+        self.initialize_callback(self)
             
     def update(self):
         '''Update the population one time step.
@@ -141,6 +163,8 @@ class InternalPopulation(object):
         self.update_propability_mass()
         self.update_firing_rate()
         if self.record == True: self.update_firing_rate_recorder()
+        logger.debug('GID(%s) Firing rate: %3.2f' % (self.gid, self.curr_firing_rate))
+        self.update_callback(self)
         
     def initialize_edges(self):
         '''Initialize self.edges and self.leak_flux_matrix attributes.
@@ -151,17 +175,18 @@ class InternalPopulation(object):
         '''
 
         # Voltage edges and leak matrix construction
+        self.tau_m = util.discretize_if_needed(self.tau_m)
+        if np.sum(self.tau_m.xk <= 0) > 0:
+            raise Exception('Negative tau_m values detected: %s' % self.tau_m.xk) # pragma: no cover
         self.edges = util.get_v_edges(self.v_min, self.v_max, self.dv)
         self.leak_flux_matrix = util.leak_matrix(self.edges, self.tau_m)
     
     def initialize_probability(self):
         '''Initialize self.pv to delta-distribution at v=0.'''
 
-        # Delta initial probability distribution:
-        self.pv = np.zeros_like(self.edges[:-1])
-        zero_bin_list = util.get_zero_bin_list(self.edges)
-        for ii in zero_bin_list:
-            self.pv[ii] = 1. / len(zero_bin_list)
+        self.p0 = util.discretize_if_needed(self.p0)
+        self.pv = util.get_pv_from_p0(self.p0, self.edges)
+        util.assert_probability_mass_conserved(self.pv, 1e-15)
         
     def initialize_firing_rate_recorder(self):
         '''Initialize recorder at the beginning of a simulation.
@@ -172,8 +197,10 @@ class InternalPopulation(object):
         '''
 
         # Set up firing rate recorder:
-        self.firing_rate_record = [self.curr_firing_rate]
-        self.t_record = [self.simulation.t]
+        if len(self.firing_rate_record) == 0:
+            self.firing_rate_record.append(self.curr_firing_rate)
+        if len(self.t_record) == 0:
+            self.t_record.append(self.simulation.t)
         
     def initialize_total_input_dict(self):
         '''Initialize dictionary of presynaptic inputs at beginning of simulation
@@ -220,6 +247,20 @@ class InternalPopulation(object):
         
         J = self.get_total_flux_matrix()
         
+#         import scipy.linalg as spla
+#         import matplotlib.pyplot as plt
+#         
+#         if self.simulation.t > .09:
+#         
+#             for key, val in self.total_input_dict.items():
+#                 print key, val
+#         
+#             evs = spla.eigvals(J*self.simulation.dt)
+#             evs_re = np.real(evs)
+#             evs_im = np.imag(evs)
+#             plt.plot(evs_re, evs_im, '.')
+#             plt.show()
+        
         if self.update_method == 'exact':
             self.pv = util.exact_update_method(J, self.pv, dt=self.simulation.dt)
             
@@ -233,6 +274,13 @@ class InternalPopulation(object):
         
         else:
             raise Exception('Unrecognized population update method: "%s"' % self.update_method)  # pragma: no cover
+        
+        # Checking stability of  
+        if len(np.where(self.pv<0)[0]) != 0 or np.abs(np.abs(self.pv).sum() - 1) > 1e-15:
+            self.pv[np.where(self.pv<0)] = 0
+            self.pv /= self.pv.sum()
+            logger.critical('Normalizing Probability Mass')
+         
         
         
     def update_firing_rate(self):
@@ -256,7 +304,6 @@ class InternalPopulation(object):
     @property
     def source_connection_list(self):
         '''List of all connections that are a source for this population.'''
-
         return [c for c in self.simulation.connection_list if c.target == self]
     
     @property
@@ -270,6 +317,10 @@ class InternalPopulation(object):
         '''Number of probability mass bin edges.'''
         
         return len(self.edges)
+    
+    @property
+    def gid(self):
+        return self.simulation.gid_dict[self]
     
     def plot_probability_distribution(self, ax=None):
         '''Convenience method to plot voltage distribution.
@@ -289,6 +340,96 @@ class InternalPopulation(object):
             
         ax.plot(self.edges[:-1], self.pv)
         return ax
+    
+    def plot(self, ax=None, **kwargs):
+        '''Convenience method to plot firing rate history.
+        
+        Parameters
+        ----------
+        ax : None or matplotlib.pyplot.axes object (default=None)
+            Axes object to plot distribution on.  If None specified, a figure and axes object will be created.
+        
+        '''
+        
+        import matplotlib.pyplot as plt
+        
+        if ax == None:
+            fig = plt.figure()
+            ax = fig.add_subplot(1, 1, 1)
+        
+        if self.firing_rate_record is None or self.t_record is None:
+            raise RuntimeError('Firing rate not recorded on gid: %s' % self.gid)  # pragma: no cover
+        ax.plot(self.t_record, self.firing_rate_record, **kwargs)
+        return ax
+    
+    def get_firing_rate(self, t):
+        '''Convenience function to get the firing rate at time "t" after simulation'''
+        
+        try:
+            ind_list = [bisect.bisect_left(self.t_record,curr_t) for curr_t in t]
+            return [self.firing_rate_record[ind] for ind in ind_list]    
+        except:
+            return self.firing_rate_record[bisect.bisect_left(self.t_record,t)]
+
+    def to_dict(self):
+        
+        # Only needed if population not yet initialized:        
+        if self.edges is None:
+            p0 = self.p0
+        else:
+            p0 = (self.edges.tolist(), self.pv.tolist())
+            
+        if len(self.firing_rate_record) is 0:
+            initial_firing_rate = 0
+        else:
+            initial_firing_rate = self.firing_rate_record[-1] 
+        
+        try:
+            tau_m = self.tau_m.xk.tolist(), self.tau_m.pk.tolist()
+        except:
+            tau_m = self.tau_m
+
+        data_dict = {'rank':self.rank,
+                     'p0':p0, 
+                     'norm':self.norm, 
+                     'tau_m':tau_m,
+                     'v_min':self.v_min,
+                     'v_max':self.v_max,
+                     'dv':self.dv,
+                     'record':self.record,
+                     'initial_firing_rate':initial_firing_rate,
+                     'update_method':self.update_method,
+                     'approx_order':self.approx_order,
+                     'tol':self.tol,
+                     'metadata':self.metadata,
+                     'module':__name__, 
+                     'class':self.__class__.__name__,
+                     'firing_rate_record':self.firing_rate_record,
+                     't_record':self.t_record}
+        
+        return data_dict
+    
+    def to_json(self, fh=None, **kwargs):
+        '''Save the contents of the InternalPopultion to json'''
+        
+        indent = kwargs.pop('indent',2)
+        data_dict = self.to_dict()
+        
+        if fh is None:
+            return json.dumps(data_dict, indent=indent, **kwargs)
+        else:
+            return json.dump(data_dict, fh, indent=indent, **kwargs)
+
         
 
+    def copy(self):
+        return InternalPopulation(**self.to_dict())
+
+    def to_df(self):
+        return to_df(self)
+    
+    def initialize_delay_queue(self, max_delay_ind):
+        
+        return np.core.numeric.ones(max_delay_ind+1)*self.simulation.get_curr_firing_rate(self.gid)
+        
         
