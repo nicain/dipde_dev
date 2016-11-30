@@ -23,6 +23,7 @@ from dipde.internals.firingrateorganizer import FiringRateOrganizer
 from dipde.internals.internalpopulation import InternalPopulation
 from dipde.interfaces.pandas import reorder_df_columns
 import logging
+from dipde.internals.externalpopulation import ExternalPopulation
 logger = logging.getLogger(__name__)
 
 class Network(object):
@@ -97,6 +98,7 @@ class Network(object):
 
         
     def run(self, dt, tf, t0=0., synchronization_harness=None):
+
         '''Main iteration control loop for simulation
         
         The time step selection must be approximately of the same order as dv
@@ -132,6 +134,7 @@ class Network(object):
         # Initialize populations:
         for gid, p in enumerate(self.population_list):
             p.initialize()
+
             if self.synchronization_harness.gid_to_rank(gid) == self.rank:
                 self.firing_rate_organizer.push(self.ti, gid, p.curr_firing_rate)
         
@@ -142,6 +145,7 @@ class Network(object):
                 p.initialize_total_input_dict()
             except AttributeError:
                 pass
+
         
         # Initialize connections:    
         for c in self.connection_list:
@@ -157,7 +161,9 @@ class Network(object):
             
         self.run_time = time.time() - start_time
         
+
         self.synchronization_harness.finalize()
+
         
         self.run_callback(self)
         
@@ -171,25 +177,38 @@ class Network(object):
         logger.info( 'time: %s' % self.t)
         
         for gid, p in enumerate(self.population_list):
+
             if self.synchronization_harness.gid_to_rank(gid) == self.rank:
                 p.update()
                 self.firing_rate_organizer.push(self.ti, gid, p.curr_firing_rate)
         
         self.synchronization_harness.update(self.ti, self.firing_rate_organizer.firing_rate_dict_internal.setdefault(self.ti, {}))
+
         
         for c in self.connection_list:
             c.update()
             
         self.update_callback(self)
         
-    def to_dict(self):
+    def to_dict(self, organization='sparse_adjacency_matrix'):
 
-        data_dict = {'population_list':[p.to_dict() for p in self.population_list],
-                     'connection_list':[c.to_dict() for c in self.connection_list],
-                     'class':self.__class__.__name__,
-                     'module':__name__}
+        population_list = [p.to_dict() for p in self.population_list]
+        connection_list = [c.to_dict() for c in self.connection_list]
+
+        if organization == 'sparse_adjacency_matrix':
+
+            data_dict = {'population_list':population_list,
+                         'connection_list':connection_list,
+                         'class':self.__class__.__name__,
+                         'module':__name__}
+            
+            return data_dict
         
-        return data_dict
+        else:
+            
+            raise NotImplementedError
+            
+            
         
     def to_json(self, fh=None, **kwargs):
         '''Save the contents of the InternalPopultion to json'''
@@ -216,6 +235,28 @@ class Network(object):
         pd.options.display.max_columns = 999
         df_list = [p.to_df() for p in self.population_list]
         return reorder_df_columns(pd.concat(df_list), ['class', 'module'])
+
+    def get_total_flux_matrix(self, internal_population, dt):
+        
+        # Protect memory state of population and network:
+        population_ind = self.population_list.index(internal_population)
+        new_network = self.copy()
+        new_network.dt = dt
+        new_network.t0 = 0
+        new_network.ti = 0
+        
+        new_internal_population = new_network.population_list[population_ind] 
+        new_internal_population.initialize()
+        new_internal_population.initialize_total_input_dict()
+        return new_internal_population.get_total_flux_matrix()
+    
+    @property
+    def external_population_list(self):
+        return [p for p in self.population_list if isinstance(p, ExternalPopulation)]
+    
+    @property
+    def internal_population_list(self):
+        return [p for p in self.population_list if isinstance(p, InternalPopulation)]
 
 
 

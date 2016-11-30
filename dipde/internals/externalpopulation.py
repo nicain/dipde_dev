@@ -18,6 +18,8 @@ from dipde.interfaces.pandas import to_df
 from sympy.utilities.lambdify import lambdify
 from sympy.abc import t as sym_t
 from sympy import Piecewise
+import sympy
+import numpy as np
 import types
 from dipde.internals import utilities as util
 import json
@@ -25,6 +27,7 @@ from dipde.interfaces.zmq import RequestFiringRate
 import logging
 logger = logging.getLogger(__name__)
 import numpy as np
+from sympy import Piecewise
 
 class ExternalPopulation(object):
     '''External (i.e. background) source for connections to Internal Populations.
@@ -59,8 +62,7 @@ class ExternalPopulation(object):
         self.rank = 0
         if isinstance(firing_rate, str):
             self.firing_rate_string = str(firing_rate)
-            self.closure = lambdify(sym_t,symp.parse_expr(self.firing_rate_string))
-#         elif isinstance(firing_rate, (types.FunctionType, RequestFiringRate)):
+            self.closure = lambdify(sym_t,symp.parse_expr(self.firing_rate_string, local_dict={'Heaviside':lambda x: Piecewise((0,x<0), (1,x>0),(.5,True))}))
         elif hasattr(firing_rate, "__call__"):
             self.closure = firing_rate
         else:
@@ -85,7 +87,10 @@ class ExternalPopulation(object):
         
         curr_firing_rate = self.closure(t)
         if curr_firing_rate < 0:
-            raise RuntimeError("negative firing rate requested: %s, at t=%s" % (self.firing_rate_string, t)) # pragma: no cover
+            if np.abs(curr_firing_rate) < 1e-14:
+                return np.abs(curr_firing_rate)
+            else:
+                raise RuntimeError("negative firing rate requested: %s, at t=%s" % (curr_firing_rate, t)) # pragma: no cover
         
         return curr_firing_rate
     
@@ -150,18 +155,27 @@ class ExternalPopulation(object):
     def gid(self):
         return self.simulation.gid_dict[self]
     
+    @property
+    def module_name(self):
+        return __name__
+    
     def to_dict(self):
-        
-        if not hasattr(self, 'firing_rate_string'):
+
+        if not hasattr(self, 'firing_rate_string') and not hasattr(self, 'nwb_file_name'):
             raise RuntimeError('Cannot marshal ExternalPopulation with not firing_rate_string') # pragma: no cover
-        
+
         data_dict = {'rank':self.rank,
                      'record':self.record,
                      'metadata':self.metadata,
-                     'firing_rate':self.firing_rate_string,
                      'class':self.__class__.__name__,
-                     'module':__name__
+                     'module':self.module_name
                       }
+        
+        if hasattr(self, 'firing_rate_string'):
+            data_dict['firing_rate'] = self.firing_rate_string
+#             raise RuntimeError('Cannot marshal ExternalPopulation with not firing_rate_string') # pragma: no cover
+        
+
         
         return data_dict
 
@@ -194,6 +208,7 @@ class ExternalPopulation(object):
         '''
         
         import matplotlib.pyplot as plt
+        show = kwargs.pop('show',False)
         
         if ax == None:
             fig = plt.figure()
@@ -202,6 +217,9 @@ class ExternalPopulation(object):
         if self.firing_rate_record is None or self.t_record is None:
             raise RuntimeError('Firing rate not recorded on gid: %s' % self.gid)  # pragma: no cover
         ax.plot(self.t_record, self.firing_rate_record, **kwargs)
+        
+        if show == True:
+            plt.show()
 
         return ax
     
@@ -212,3 +230,4 @@ class ExternalPopulation(object):
         delay_queue = delay_queue[::-1]
         
         return delay_queue
+

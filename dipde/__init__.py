@@ -13,10 +13,15 @@
 # You should have received a copy of the GNU General Public License
 # along with dipde.  If not, see <http://www.gnu.org/licenses/>.
 
-__version__ = '0.2.0'
+__version__ = '0.2.1'
+
+import logging
+logging.basicConfig(level=logging.DEBUG)
 
 from internals.internalpopulation import InternalPopulation
 from internals.externalpopulation import ExternalPopulation
-import logging
-logging.basicConfig(level=logging.DEBUG)
+from internals.network import Network
+from internals.simulation import Simulation
+from internals.connection import Connection
+from internals.simulationconfiguration import SimulationConfiguration
 
