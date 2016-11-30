@@ -27,18 +27,18 @@ def test_tau_normal():
     a = 0
     b = np.inf
     tau_m_dist = sps.truncnorm(float(a - mu) / sigma, float(b - mu)/sigma, loc=mu, scale=sigma)
-    singlepop(4.4905752835535582, tau_m=(tau_m_dist,50))
+    singlepop(4.7064469636898467, tau_m=(tau_m_dist,50))
 
 def test_p0():
     p0 = sps.norm(0.01,.001)
-    singlepop(5.4319721344676637, p0=p0)
+    singlepop(5.4339562725381763, p0=p0)
     
 def test_gmres():
     singlepop(5.0693643281797707, update_method='gmres', tol=1e-5)
     
 def test_weight():
     weights = sps.norm(0.005,.001)
-    singlepop(5.7051134618017816, weights=weights)
+    singlepop(5.379652403431419, weights=weights)
     
 def test_drive():
     bgfr = lambda t: 100

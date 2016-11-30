@@ -1,5 +1,8 @@
 import numpy as np
 import matplotlib
+import logging
+logging.disable(logging.CRITICAL)
+
 matplotlib.use('Agg')
 
 def test_singlepop():
@@ -28,7 +31,7 @@ def test_singlepop_exponential_distribution():
     t, y = example(show=False)
 
     np.testing.assert_almost_equal(t[-1], .1)
-    np.testing.assert_almost_equal(y[-1], 8.6661023435049493)
+    np.testing.assert_almost_equal(y[-1], 8.6633532147226866)
     
 def test_excitatory_inhibitory():
     from dipde.examples.excitatory_inhibitory import example
@@ -60,10 +63,10 @@ def test_potjans_diesmann():
     
 
 if __name__ == "__main__":                      # pragma: no cover
-    # test_singlepop()                            # pragma: no cover
-    # test_singlepop_sine()                       # pragma: no cover
-    # test_singlepop_recurrent()                  # pragma: no cover
-    # test_singlepop_exponential_distribution()   # pragma: no cover
-    # test_excitatory_inhibitory()                # pragma: no cover
+    test_singlepop()                            # pragma: no cover
+    test_singlepop_sine()                       # pragma: no cover
+    test_singlepop_recurrent()                  # pragma: no cover
+    test_singlepop_exponential_distribution()   # pragma: no cover
+    test_excitatory_inhibitory()                # pragma: no cover
     test_potjans_diesmann()                     # pragma: no cover
 

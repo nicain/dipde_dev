@@ -33,16 +33,15 @@ def test_dist_json_delta():
 def test_equvalent_discrete():
     import dipde
 
-    test_list = [dipde.InternalPopulation(v_min=0, v_max=.02, dv=.001),
-                   dipde.InternalPopulation(v_min=0, v_max=.02, dv=.001, p0={'distribution': 'delta', 'loc': 0}),
-                   dipde.InternalPopulation(v_min=0, v_max=.02, dv=.001, p0='{"distribution":"delta", "loc":0}'),
-                   dipde.InternalPopulation(v_min=0, v_max=.02, dv=.001, p0=([0], [1])),
-                   dipde.InternalPopulation(v_min=0, v_max=.02, dv=.001, p0=sps.rv_discrete(values=([0], [1]))),
-                   dipde.InternalPopulation(v_min=0, v_max=.02, dv=.001, p0=sps.randint(low=0, high=1)),
-                   dipde.InternalPopulation(v_min=0, v_max=.02, dv=.001,
-                                            p0='{"distribution":"randint", "low":0, "high":1}')]
+    test_list = [.001,
+                 {'distribution': 'delta', 'loc': 0},
+                 '{"distribution":"delta", "loc":0}',
+                 ([0], [1]),
+                 sps.rv_discrete(values=([0], [1]))]
 
-    for i1 in test_list:
+    for p0 in test_list:
+        print p0
+        i1 = dipde.InternalPopulation(v_min=0, v_max=.02, dv=.001, p0=p0)
         b1 = dipde.ExternalPopulation('100')
         b1_i1 = dipde.Connection(b1, i1, 1, weights=.005)
         network = dipde.Network([b1, i1], [b1_i1])
@@ -67,7 +66,7 @@ def test_equvalent_continuous():
         b1_i1 = dipde.Connection(b1, i1, 1, weights=.005)
         network = dipde.Network([b1, i1], [b1_i1])
         network.run(dt=.001, tf=.2)
-        np.testing.assert_almost_equal(i1.firing_rate_record[-1], 5.39156809706, 10)
+        np.testing.assert_almost_equal(i1.firing_rate_record[-1], 5.3915680916372484, 10)
 
 if __name__ == "__main__":                      # pragma: no cover
     test_continuous_no_N()                      # pragma: no cover
