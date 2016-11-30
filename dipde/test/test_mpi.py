@@ -2,6 +2,9 @@
 import json
 from dipde.profiling import time_network
 
+def test_mpi_bare():
+    from dipde.interfaces.mpi import MPIJob
+    assert MPIJob(np=1, python='', module_args=[], module='printf test').run(dryrun=False) == 'test'
 
 
 def test_benchmark_singlepop(verbose=False, scale=4):
@@ -43,5 +46,6 @@ def test_benchmark_recurrent_singlepop(verbose=False, scale=4):
             assert result_dict_1[key] == result_dict_2[key] == result_dict_4[key]
     
 if __name__ == "__main__":                              # pragma: no cover
-    test_benchmark_singlepop(verbose=True)              # pragma: no cover
-    test_benchmark_recurrent_singlepop(verbose=True)    # pragma: no cover
+    test_mpi_bare()                              # pragma: no cover
+    # test_benchmark_singlepop(verbose=True)              # pragma: no cover
+    # test_benchmark_recurrent_singlepop(verbose=True)    # pragma: no cover

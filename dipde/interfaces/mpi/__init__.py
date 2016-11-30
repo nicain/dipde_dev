@@ -19,7 +19,7 @@ class MPIJob(object):
         self.python = kwargs.get('python', 'nrniv')
         self.module_args = kwargs.get('module_args', [])
     
-    def run(self):
+    def run(self, dryrun=False):
         subprocess_args = [MPIJob.mpi_command]
         
         subprocess_args.append('-np')
@@ -31,11 +31,16 @@ class MPIJob(object):
         for arg in self.module_args:
             subprocess_args.append(arg)
 
-        sub_process = sp.Popen(' '.join(subprocess_args),
-                               shell=True,
-                               stdin=sp.PIPE,
-                               stdout=sp.PIPE,
-                               close_fds=True)
-        sp_output = sub_process.stdout
-        x = sp_output.read()
-        return x
+        if dryrun == False:
+            sub_process = sp.Popen(' '.join(subprocess_args),
+                                   shell=True,
+                                   stdin=sp.PIPE,
+                                   stdout=sp.PIPE,
+                                   close_fds=True)
+            sp_output = sub_process.stdout
+            x = sp_output.read()
+            return x
+        elif dryrun == True:
+            return ' '.join(subprocess_args)
+        else:
+            raise Exception
