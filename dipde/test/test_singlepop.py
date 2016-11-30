@@ -45,21 +45,20 @@ def test_drive():
     singlepop(basic_steady_state, bgfr=bgfr)
     
 def test_zmq_drive_bind_server():
-    
-    test_port = 5555
 
     try:
         # Start reply server:
-        reply_server_thread = ReplyServerThread(test_port, lambda t: 100)
+        reply_server_thread = ReplyServerThread(lambda t: 100)
         reply_server_thread.start()
-    
+
+
         # Run test:
-        singlepop(basic_steady_state, bgfr=RequestFiringRate(test_port))
+        singlepop(basic_steady_state, bgfr=RequestFiringRate(reply_server_thread.port))
 
     finally:
         import zmq
         socket = zmq_context.socket(zmq.REQ)
-        socket.connect("tcp://localhost:%s" % test_port)
+        socket.connect("tcp://localhost:%s" % reply_server_thread.port)
         socket.send('SHUTDOWN')
         message = socket.recv()
         assert message == 'DOWN'
@@ -85,23 +84,23 @@ def test_checkpoint_simulation():
 
 def test_zmq_callback():
 
-    test_port = 5556
+    # test_port = 5556
     
     # Start a thread that will listen to the callback:
-    temp = CallbackSubscriberThread(test_port)
+    temp = CallbackSubscriberThread()
     temp.start()
     
     # Create callback, and wrap to make it publish:
     def network_update_callback(s):
         return [s.t]
-    network_update_callback_pub = PublishCallbackConnect(test_port, 'test', network_update_callback)
+    network_update_callback_pub = PublishCallbackConnect(temp.port, 'test', network_update_callback)
     
     # Run:
     singlepop(basic_steady_state, network_update_callback=network_update_callback_pub)
     
 
 
-def singlepop(steady_state, tau_m=.02, p0=((0.,),(1.,)), weights={'distribution':'delta', 'weight':.005}, bgfr=100, network_update_callback=lambda s: None, update_method='approx', simulation_configuration=None, tol=None):
+def singlepop(steady_state, tau_m=.02, p0=((0.,),(1.,)), weights={'distribution':'delta', 'loc':.005}, bgfr=100, network_update_callback=lambda s: None, update_method='approx', simulation_configuration=None, tol=None):
     
     # Settings:
     t0 = 0.

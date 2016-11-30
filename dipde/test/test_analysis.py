@@ -9,7 +9,7 @@ def test_get_J():
     # Settings:
     bgfr=100
     update_method='approx'
-    weights={'distribution':'delta', 'weight':.005}
+    weights={'distribution':'delta', 'loc':.005}
     p0=((0.,),(1.,)) 
     tau_m=.02
     dv = .001

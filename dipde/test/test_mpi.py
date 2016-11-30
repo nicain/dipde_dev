@@ -1,14 +1,15 @@
 # Set up number of threads for fair comparison:
 import json
-from dipde.interfaces.mpi import MPIJob
-import dipde.interfaces.mpi.benchmark as benchmark
-from dipde.interfaces.mpi.synchronizationharness import MPISynchronizationHarness
 from dipde.profiling import time_network
 
 
 
 def test_benchmark_singlepop(verbose=False, scale=4):
-        
+
+    from dipde.interfaces.mpi import MPIJob
+    import dipde.interfaces.mpi.benchmark as benchmark
+    from dipde.interfaces.mpi.synchronizationharness import MPISynchronizationHarness
+
     # Smoke test benchmark code, single core:
     network = benchmark.get_singlepop_benchmark_network(scale)
     synchronization_harness = MPISynchronizationHarness(network)
@@ -23,6 +24,10 @@ def test_benchmark_singlepop(verbose=False, scale=4):
             assert result_dict_1[key] == result_dict_2[key] == result_dict_4[key]
             
 def test_benchmark_recurrent_singlepop(verbose=False, scale=4):
+
+    from dipde.interfaces.mpi import MPIJob
+    import dipde.interfaces.mpi.benchmark as benchmark
+    from dipde.interfaces.mpi.synchronizationharness import MPISynchronizationHarness
         
     # Smoke test benchmark code, single core:
     network = benchmark.get_recurrent_singlepop_benchmark_network(scale)
