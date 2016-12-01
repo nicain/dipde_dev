@@ -14,6 +14,7 @@ class Simulation(object):
         
         network = kwargs.get('network', None)
         simulation_configuration = kwargs.get('simulation_configuration', None)
+        self.checkpoint_callback = kwargs.get('checkpoint_callback', None)
         
         # Create network
         #TODO: factor this functionality into a utility function
@@ -31,13 +32,15 @@ class Simulation(object):
             self.simulation_configuration = simulation_configuration
 
         self.checkpoint_period = getattr(self.simulation_configuration, 'checkpoint_period', np.inf)
-        self.checkpoint_file_name = getattr(self.simulation_configuration, 'checkpoint_file_name', 'checkpoint.json')
-        assert self.checkpoint_file_name[-4:] == 'json'
+        self.checkpoint_file_name = getattr(self.simulation_configuration, 'checkpoint_file_name', None)
+        assert self.checkpoint_file_name is None or self.checkpoint_file_name[-4:] == 'json'
 
         self.thread = threading.Thread(target=self.run_checkpoint_thread)
         self.thread.daemon = True
 
     def run(self):
+
+        self._network_trapped_at_callback = False
         
         # Monkey patch the trapping function onto the network callback
         old_network_callback = self.network.update_callback
@@ -47,7 +50,7 @@ class Simulation(object):
         self.network.update_callback = types.MethodType(new_network_callback, self.network)
         
         self.pause = False
-        if not (self.checkpoint_file_name is None or self.checkpoint_period ==np.inf): 
+        if (not self.checkpoint_period ==np.inf and not self.checkpoint_file_name is None) or (not self.checkpoint_callback is None):
             self.thread.start() 
         self.network.run(self.simulation_configuration.dt, self.simulation_configuration.tf, self.simulation_configuration.t0)
 
@@ -103,16 +106,21 @@ class Simulation(object):
                 time.sleep(.1) 
               
             # Network is at update_callback, safe to write:
-            checkpoint_simulation_configuration = SimulationConfiguration(t0=self.network.t, 
-                                                                            tf=self.simulation_configuration.tf,
-                                                                            dt=self.simulation_configuration.dt,
-                                                                            checkpoint_file_name = self.simulation_configuration.checkpoint_file_name,
-                                                                            checkpoint_period=self.simulation_configuration.checkpoint_period)
-            checkpoint_simulation = Simulation(simulation_configuration=checkpoint_simulation_configuration,
-                                                     network = self.network)
-            checkpoint_simulation.to_json(fh=open(self.checkpoint_file_name, 'w'))
+            if not self.checkpoint_file_name is None:
+                checkpoint_simulation_configuration = SimulationConfiguration(t0=self.network.t,
+                                                                                tf=self.simulation_configuration.tf,
+                                                                                dt=self.simulation_configuration.dt,
+                                                                                checkpoint_file_name = self.simulation_configuration.checkpoint_file_name,
+                                                                                checkpoint_period=self.simulation_configuration.checkpoint_period)
+                checkpoint_simulation = Simulation(simulation_configuration=checkpoint_simulation_configuration,
+                                                         network = self.network)
+                checkpoint_simulation.to_json(fh=open(self.checkpoint_file_name, 'w'))
+
+            if not self.checkpoint_callback is None:
+                self.checkpoint_callback(self)
+
             logger.info('Checkpoint (%s): %s' % (self.checkpoint_file_name, self.network.t))
-              
+
             # Release from pause
             self.pause = False
             

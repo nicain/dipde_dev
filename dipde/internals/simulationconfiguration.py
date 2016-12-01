@@ -3,7 +3,7 @@ import json
 
 class SimulationConfiguration(object):
     
-    def __init__(self, dt, tf, t0=0, checkpoint_file_name='checkpoint.json', checkpoint_period=np.inf):
+    def __init__(self, dt, tf, t0=0, checkpoint_file_name=None, checkpoint_period=np.inf):
         
         self.dt = dt
         self.tf = tf

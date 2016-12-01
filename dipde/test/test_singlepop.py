@@ -75,12 +75,26 @@ def test_checkpoint_simulation():
     
     def network_update_callback(s):
         time.sleep(.03)
+
+    class Canary(object):
+        def __init__(self):
+            self.called = False
+
+        def checkpoint_callback(self, n):
+            self.called = True
+
+    canary = Canary()
     
     simulation_configuration = SimulationConfiguration(dt, tf, t0=t0, checkpoint_file_name=checkpoint_file_name, checkpoint_period=checkpoint_period)
 #     logging.disable(logging.DEBUG)
-    singlepop(basic_steady_state, simulation_configuration=simulation_configuration, network_update_callback=network_update_callback)
+    singlepop(basic_steady_state,
+              simulation_configuration=simulation_configuration,
+              network_update_callback=network_update_callback,
+              checkpoint_callback = canary.checkpoint_callback)
     assert os.path.exists(checkpoint_file_name)
     os.remove(checkpoint_file_name)
+
+    assert canary.called == True
 
 def test_zmq_callback():
 
@@ -100,7 +114,7 @@ def test_zmq_callback():
     
 
 
-def singlepop(steady_state, tau_m=.02, p0=((0.,),(1.,)), weights={'distribution':'delta', 'loc':.005}, bgfr=100, network_update_callback=lambda s: None, update_method='approx', simulation_configuration=None, tol=None):
+def singlepop(steady_state, tau_m=.02, p0=((0.,),(1.,)), weights={'distribution':'delta', 'loc':.005}, bgfr=100, network_update_callback=lambda s: None, update_method='approx', simulation_configuration=None, tol=None, checkpoint_callback=None):
     
     # Settings:
     t0 = 0.
@@ -117,7 +131,7 @@ def singlepop(steady_state, tau_m=.02, p0=((0.,),(1.,)), weights={'distribution'
     network = Network([b1, i1], [b1_i1], update_callback=network_update_callback)
     if simulation_configuration is None:
         simulation_configuration = SimulationConfiguration(dt, tf, t0=t0)
-    simulation = Simulation(network=network, simulation_configuration=simulation_configuration)
+    simulation = Simulation(network=network, simulation_configuration=simulation_configuration, checkpoint_callback=checkpoint_callback)
     simulation.run()
     b1.plot()
     
