@@ -1,11 +1,11 @@
 
-def test_imports():
+def xtest_imports():
     
     # Trick to get around code coverage report skipping __ini__.py sinde dipde is imported in setup.py to get version
     import dipde as dd
     reload(dd)
     
-def test_internal():
+def xtest_internal():
     
     import dipde.internals.simulationconfiguration as simconf
     reload(simconf)

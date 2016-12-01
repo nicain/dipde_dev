@@ -231,3 +231,10 @@ class ExternalPopulation(object):
         
         return delay_queue
 
+
+    def shutdown(self):
+        # print self.closure
+        if hasattr(self.closure, 'shutdown'):
+            self.closure.shutdown()
+        else:
+            pass

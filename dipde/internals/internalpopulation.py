@@ -536,4 +536,5 @@ class InternalPopulation(object):
         
         return np.core.numeric.ones(max_delay_ind+1)*self.simulation.get_curr_firing_rate(self.gid)
 
-        
+    def shutdown(self):
+        pass

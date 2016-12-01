@@ -84,6 +84,10 @@ class RequestFiringRate(object):
         self.socket.send('%s' % t)
         message = self.socket.recv_multipart()
         return float(message[0])
+
+    def shutdown(self):
+        self.socket.close()
+        assert self.socket.closed
     
 class ReplyFiringRateServer(object):
     
@@ -97,12 +101,8 @@ class ReplyFiringRateServer(object):
             self.socket.bind("tcp://*:%s" % port)
             self.port = port
 
-
-
         self.reply_function = reply_function
 
-
-        
     def run(self):
         
         while True:
@@ -112,11 +112,13 @@ class ReplyFiringRateServer(object):
             requested_t = float(message)
             self.socket.send_multipart([b"%s" % self.reply_function(requested_t)])
         self.socket.send('DOWN')
+        self.socket.close()
 
 class ReplyServerThread(threading.Thread):
 
     def __init__(self, reply_function, port=None):
-        super(self.__class__, self).__init__()
+        super(ReplyServerThread, self).__init__()
+        self._stop = threading.Event()
         self.daemon = True
         self.reply_function = reply_function
         self.server = ReplyFiringRateServer(self.reply_function, port=port)
@@ -125,8 +127,48 @@ class ReplyServerThread(threading.Thread):
     def run(self, port=None):
         self.server.run()
 
+    def shutdown(self):
+        shutdown_socket = context.socket(zmq.REQ)
+        shutdown_socket.connect("tcp://localhost:%s" % self.port)
+        shutdown_socket.send('SHUTDOWN')
+        message = shutdown_socket.recv()
+        assert message == 'DOWN'
+        self.stop()
+
+    def stop(self):
+        self._stop.set()
+
+    def stopped(self):
+        return self._stop.isSet()
+
     @property
     def port(self):
         return self.server.port
 
+class WidgetReplyServerThread(ReplyServerThread):
 
+    def __init__(self, widget, port=None, get_value=None):
+        super(WidgetReplyServerThread, self).__init__(self.reply_function)
+        self.daemon = True
+        self.get_value = None
+        self.widget = widget
+        self.server = ReplyFiringRateServer(self.reply_function, port=port)
+
+    def reply_function(self, t):
+        if not self.get_value is None:
+            return self.get_value(self.widget, t)
+        else:
+            return self.widget.value
+
+# class WidgetPublisher(object):
+#     def __init__(self, widget, port):
+#         self.widget = widget
+#         self.reply_server = ReplyFiringRateServer(port, self.reply_function)
+#
+#     def start(self):
+#         self.reply_server.run()
+#         for ii in range(100):
+#             time.sleep(.1)
+#
+#     def reply_function(self):
+#         return self.widget.value

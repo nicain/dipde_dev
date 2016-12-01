@@ -233,4 +233,6 @@ class Connection(object):
         
     def copy(self):
         return Connection(**self.to_dict())
-    
+
+    def shutdown(self):
+        pass

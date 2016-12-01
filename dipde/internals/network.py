@@ -163,9 +163,18 @@ class Network(object):
         
 
         self.synchronization_harness.finalize()
+        self.shutdown()
 
         
         self.run_callback(self)
+
+    def shutdown(self):
+
+        for p in self.population_list:
+            p.shutdown()
+
+        for c in self.connection_list:
+            c.shutdown()
         
     @property
     def t(self): return self.t0+self.ti*self.dt

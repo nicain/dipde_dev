@@ -7,10 +7,15 @@ import time
 from simulationconfiguration import SimulationConfiguration
 import logging
 logger = logging.getLogger(__name__)
+import threading
 
-class Simulation(object):
+class Simulation(threading.Thread):
     
     def __init__(self, **kwargs):
+
+        super(Simulation, self).__init__()
+
+        self.daemon = kwargs.pop('daemon', False)
         
         network = kwargs.get('network', None)
         simulation_configuration = kwargs.get('simulation_configuration', None)
