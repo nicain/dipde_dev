@@ -57,7 +57,7 @@ class ExternalPopulation(object):
     '''
 
 
-    def __init__(self, firing_rate, rank=0,record=False, firing_rate_record=[], t_record=[], metadata={}, **kwargs):
+    def __init__(self, firing_rate=None, rank=0,record=False, firing_rate_record=[], t_record=[], metadata={}, **kwargs):
         
         self.rank = 0
         if isinstance(firing_rate, str):
@@ -233,8 +233,4 @@ class ExternalPopulation(object):
 
 
     def shutdown(self):
-        # print self.closure
-        if hasattr(self.closure, 'shutdown'):
-            self.closure.shutdown()
-        else:
-            pass
+        pass

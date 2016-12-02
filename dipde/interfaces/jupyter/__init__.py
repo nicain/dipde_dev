@@ -1,8 +1,9 @@
 import IPython.display
 from dipde.interfaces.zmq import RequestConnection, ReplyServerThread, ReplyServerBind
-from dipde.internals import ExternalPopulation
+from dipde.internals import ExternalPopulation, Connection
 import ipywidgets as ipw
 import types
+import time
 
 class WidgetReplyServerThread(ReplyServerThread):
 
@@ -13,9 +14,9 @@ class WidgetReplyServerThread(ReplyServerThread):
         self.widget = widget
         self.server = ReplyServerBind(self.reply_function, port=port)
 
-    def reply_function(self, t):
+    def reply_function(self, *args):
         if not self.get_value is None:
-            return self.get_value(self.widget, t)
+            return self.get_value(self.widget, *args)
         else:
             return self.widget.value
 
@@ -31,17 +32,15 @@ class ZMQIntSlider(ipw.IntSlider):
         self.reply_server_thread = WidgetReplyServerThread(self, port=port)
         self.zmq_firing_rate_request_function = RequestConnection(self.port)
 
-
-    @property
-    def port(self):
-        return self.reply_server_thread.port
-
-
-    def start(self):
+        # Start up server:
         self.reply_server_thread.start()
         if self.display == True:
             IPython.display.display(self)
 
+
+    @property
+    def port(self):
+        return self.reply_server_thread.port
 
     def shutdown(self):
         self.reply_server_thread.shutdown()
@@ -49,27 +48,23 @@ class ZMQIntSlider(ipw.IntSlider):
         if not self.zmq_firing_rate_request_function.socket.closed:
             self.zmq_firing_rate_request_function.shutdown()
 
-def get_ExcitatoryPopulationZMQ(interactor, **kwargs):
 
-    population = ExternalPopulation(interactor.zmq_firing_rate_request_function, **kwargs)
+def wrap_widget(obj_to_wrap, widget_to_wrap, property_to_wrap):
+    reassign_dict = {'nsyn': 'nsyn_input',
+                     'external_firing_rate':'closure'}
 
-    # Monkey patch the start function onto the initialize function
-    old_initialize = population.initialize
-    def new_initialize(_self, ):
-        interactor.start()
-        old_initialize()
-    population.initialize = types.MethodType(new_initialize, population)
+    setattr(obj_to_wrap, reassign_dict[property_to_wrap], widget_to_wrap.zmq_firing_rate_request_function)
 
     # Monkey patch the shutdown function
-    old_shutdown = population.shutdown
+    old_shutdown = obj_to_wrap.shutdown
+
     def new_shutdown(_self, ):
-        interactor.shutdown()
+        widget_to_wrap.shutdown()
         old_shutdown()
-    population.shutdown = types.MethodType(new_shutdown, population)
 
-    return population
+    obj_to_wrap.shutdown = types.MethodType(new_shutdown, obj_to_wrap)
 
-
+    return obj_to_wrap
 
 
 
@@ -88,3 +83,5 @@ class ProgressBar(object):
 
     def set_network(self, network):
         self.network = network
+
+

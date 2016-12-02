@@ -73,11 +73,12 @@ class Network(object):
             if isinstance(c, dict):
                 curr_module, curr_class = c['class']
                 curr_instance = getattr(importlib.import_module(curr_module), curr_class)(**c)
-                if curr_instance.nsyn != 0:
+                if curr_instance.nsyn_input != 0:
                     self.connection_list.append(curr_instance)
             else:
-                if c.nsyn != 0:
+                if c.nsyn_input != 0:
                     self.connection_list.append(c)
+
 
 
         self.gid_dict = dict((population, ii) for ii, population in enumerate(self.population_list))
@@ -94,6 +95,7 @@ class Network(object):
         # Each connection needs access to t:
         for c in self.connection_list:
             c.simulation = self
+
     
     @property
     def rank(self):
@@ -134,6 +136,8 @@ class Network(object):
         self.tf = tf
         self.ti = 0
 
+
+
         if not self.progress is None: self.progress.initialize()
         self.synchronization_harness.initialize(self.ti)
         
@@ -145,28 +149,31 @@ class Network(object):
                 self.firing_rate_organizer.push(self.ti, gid, p.curr_firing_rate)
         
         self.synchronization_harness.update(self.ti, self.firing_rate_organizer.firing_rate_dict_internal.setdefault(self.ti, {}))
-            
+
+
+
+        # Initialize connections:
+        for c in self.connection_list:
+            c.initialize()
+
+
+
         for p in self.population_list:
             try:
                 p.initialize_total_input_dict()
             except AttributeError:
                 pass
 
-        
-        # Initialize connections:    
-        for c in self.connection_list:
-            c.initialize()
         self.initialization_time = time.time() - start_time
         
-        
+
         
         # Run
         start_time = time.time()
         while self.t < self.tf:
             self.update()
-            
+
         self.run_time = time.time() - start_time
-        
 
         self.synchronization_harness.finalize()
         self.shutdown()
@@ -176,11 +183,13 @@ class Network(object):
 
     def shutdown(self):
 
+        for c in self.connection_list:
+            c.shutdown()
+
         for p in self.population_list:
             p.shutdown()
 
-        for c in self.connection_list:
-            c.shutdown()
+
         
     @property
     def t(self): return self.t0+self.ti*self.dt
