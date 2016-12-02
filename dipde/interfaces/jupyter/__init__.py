@@ -19,44 +19,58 @@ class WidgetReplyServerThread(ReplyServerThread):
         else:
             return self.widget.value
 
-class IntSliderInput(object):
-    def __init__(self, port=None, display=True, **kwargs):
+
+class ZMQIntSlider(ipw.IntSlider):
+
+    def __init__(self,  port=None, display=True, **kwargs):
 
         self.display = display
 
-        self.int_slider = ipw.IntSlider(**kwargs)
-        self.reply_server_thread = WidgetReplyServerThread(self.int_slider, port=port)
+        super(ZMQIntSlider, self).__init__(**kwargs)
+
+        self.reply_server_thread = WidgetReplyServerThread(self, port=port)
         self.zmq_firing_rate_request_function = RequestConnection(self.port)
-        self.population = ExternalPopulation(self.zmq_firing_rate_request_function)
 
-        # Monkey patch the start function onto the initialize function
-        old_initialize = self.population.initialize
-        def new_initialize(_self, ):
-            self.start()
-            old_initialize()
-        self.population.initialize= types.MethodType(new_initialize, self.population)
-
-        # Monkey patch the shutdown function
-        old_shutdown= self.population.shutdown
-        def new_shutdown(_self, ):
-            self.shutdown()
-            old_shutdown()
-        self.population.shutdown = types.MethodType(new_shutdown, self.population)
 
     @property
     def port(self):
         return self.reply_server_thread.port
 
+
     def start(self):
         self.reply_server_thread.start()
         if self.display == True:
-            IPython.display.display(self.int_slider)
+            IPython.display.display(self)
+
 
     def shutdown(self):
         self.reply_server_thread.shutdown()
 
         if not self.zmq_firing_rate_request_function.socket.closed:
             self.zmq_firing_rate_request_function.shutdown()
+
+def get_ExcitatoryPopulationZMQ(interactor, **kwargs):
+
+    population = ExternalPopulation(interactor.zmq_firing_rate_request_function, **kwargs)
+
+    # Monkey patch the start function onto the initialize function
+    old_initialize = population.initialize
+    def new_initialize(_self, ):
+        interactor.start()
+        old_initialize()
+    population.initialize = types.MethodType(new_initialize, population)
+
+    # Monkey patch the shutdown function
+    old_shutdown = population.shutdown
+    def new_shutdown(_self, ):
+        interactor.shutdown()
+        old_shutdown()
+    population.shutdown = types.MethodType(new_shutdown, population)
+
+    return population
+
+
+
 
 
 class ProgressBar(object):
