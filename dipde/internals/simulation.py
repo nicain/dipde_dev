@@ -16,7 +16,7 @@ class Simulation(threading.Thread):
         super(Simulation, self).__init__()
 
         self.daemon = kwargs.pop('daemon', False)
-        
+
         network = kwargs.get('network', None)
         simulation_configuration = kwargs.get('simulation_configuration', None)
         self.checkpoint_callback = kwargs.get('checkpoint_callback', None)
@@ -28,6 +28,10 @@ class Simulation(threading.Thread):
             self.network = getattr(importlib.import_module(curr_module), curr_class)(**network) 
         else: 
             self.network = network
+
+
+
+
             
         # Create simulation_configuration:
         if isinstance(simulation_configuration, dict):

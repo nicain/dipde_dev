@@ -51,11 +51,14 @@ class Network(object):
                  metadata={},
                  run_callback=lambda s: None,
                  update_callback=lambda s: None,
+                 progress=None,
                  **kwargs):
         
         self.update_callback = update_callback
         self.run_callback = run_callback
-        
+
+        self.progress = progress
+
         self.population_list = []
         for p in population_list:
             if isinstance(p, dict):
@@ -123,12 +126,15 @@ class Network(object):
         
         self.dt = dt
         self.t0 = t0
-        
+
+        if not self.progress is None: self.progress.set_network(self)
+
         # Initialize:
         start_time = time.time()
         self.tf = tf
         self.ti = 0
-        
+
+        if not self.progress is None: self.progress.initialize()
         self.synchronization_harness.initialize(self.ti)
         
         # Initialize populations:
@@ -181,6 +187,7 @@ class Network(object):
 
     def update(self):
 
+        if not self.progress is None: self.progress.update()
         self.firing_rate_organizer.drop(self.ti)
         self.ti += 1
         logger.info( 'time: %s' % self.t)
