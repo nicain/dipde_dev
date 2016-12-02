@@ -101,8 +101,15 @@ class Network(object):
     def rank(self):
         return self.synchronization_harness.rank
 
+    def run(self, *args, **kwargs):
+        try:
+            self._run(*args, **kwargs)
+        except Exception as e:
+            self.shutdown()
+            print 'Safely Shutting down after exception...'
+            raise e
         
-    def run(self, dt, tf, t0=0., synchronization_harness=None):
+    def _run(self, dt, tf, t0=0., synchronization_harness=None):
 
         '''Main iteration control loop for simulation
         
