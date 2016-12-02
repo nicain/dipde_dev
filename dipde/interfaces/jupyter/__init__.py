@@ -69,14 +69,16 @@ def wrap_widget(obj_to_wrap, widget_to_wrap, property_to_wrap):
 
 
 class ProgressBar(object):
-    def __init__(self):
+    def __init__(self, display = True):
         self.progress_bar = ipw.FloatProgress()
+        self.display = display
 
     def initialize(self):
         self.progress_bar.min = 0
         self.progress_bar.max = int((self.network.tf - self.network.t0) / self.network.dt)
         self.progress_bar.value = 0
-        IPython.display.display(self.progress_bar)
+        if self.display == True:
+            IPython.display.display(self.progress_bar)
 
     def update(self):
         self.progress_bar.value += 1
