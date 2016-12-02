@@ -6,7 +6,7 @@ from dipde.internals.network import Network
 from dipde.internals.simulation import Simulation
 from dipde.internals.connection import Connection as Connection
 import scipy.stats as sps
-from dipde.interfaces.zmq import RequestFiringRate, ReplyServerThread
+from dipde.interfaces.zmq import RequestConnection, ReplyServerThread
 from dipde.interfaces.zmq import PublishCallbackConnect, CallbackSubscriberThread
 from dipde.interfaces.zmq import context as zmq_context
 import time
@@ -43,35 +43,19 @@ def test_weight():
 def test_drive():
     bgfr = lambda t: 100
     singlepop(basic_steady_state, bgfr=bgfr)
+
+def test_zmq_nsyn():
+    reply_server_thread = ReplyServerThread(lambda: 1)
+    reply_server_thread.start()
+    singlepop(basic_steady_state, nsyn=RequestConnection(reply_server_thread.port))
+    reply_server_thread.shutdown()
     
 def test_zmq_drive_bind_server():
 
-    # try:
-        # Start reply server:
     reply_server_thread = ReplyServerThread(lambda t: 100)
     reply_server_thread.start()
-
-
-        # Run test:
-    singlepop(basic_steady_state, bgfr=RequestFiringRate(reply_server_thread.port))
-    # finally:
+    singlepop(basic_steady_state, bgfr=RequestConnection(reply_server_thread.port))
     reply_server_thread.shutdown()
-        # import zmq
-        # socket = zmq_context.socket(zmq.REQ)
-        # socket.connect("tcp://localhost:%s" % reply_server_thread.port)
-        # socket.send('SHUTDOWN')
-        # message = socket.recv()
-        # assert message == 'DOWN'
-        # reply_server_thread.shutdown()
-        # time.sleep(10)
-        # print reply_server_thread.is_alive()
-        # reply_server_thread.server.socket.close()
-        # reply_server_thread.shutdown()
-        # time.sleep(10)
-        # print 'tst'#reply_server_thread.server.socket.closed
-        # time.sleep(10)
-        # assert reply_server_thread.is_alive() == False
-        # print 'DONE'
 
 def test_checkpoint_simulation():
     
@@ -122,7 +106,7 @@ def test_zmq_callback():
     
 
 
-def singlepop(steady_state, tau_m=.02, p0=((0.,),(1.,)), weights={'distribution':'delta', 'loc':.005}, bgfr=100, network_update_callback=lambda s: None, update_method='approx', simulation_configuration=None, tol=None, checkpoint_callback=None):
+def singlepop(steady_state, tau_m=.02, p0=((0.,),(1.,)), weights={'distribution':'delta', 'loc':.005}, bgfr=100, network_update_callback=lambda s: None, update_method='approx', simulation_configuration=None, tol=None, checkpoint_callback=None, nsyn=1):
     
     # Settings:
     t0 = 0.
@@ -135,7 +119,7 @@ def singlepop(steady_state, tau_m=.02, p0=((0.,),(1.,)), weights={'distribution'
     # Create simulation:
     b1 = ExternalPopulation(bgfr)
     i1 = InternalPopulation(v_min=v_min, tau_m=tau_m, v_max=v_max, dv=dv, update_method=update_method, p0=p0, tol=tol)
-    b1_i1 = Connection(b1, i1, 1, weights=weights)
+    b1_i1 = Connection(b1, i1, nsyn, weights=weights)
     network = Network([b1, i1], [b1_i1], update_callback=network_update_callback)
     if simulation_configuration is None:
         simulation_configuration = SimulationConfiguration(dt, tf, t0=t0)
@@ -147,18 +131,22 @@ def singlepop(steady_state, tau_m=.02, p0=((0.,),(1.,)), weights={'distribution'
     i1.plot()
     assert i1.n_edges == i1.n_bins+1 
 
-    # Test steady-state:    
+    # Test steady-state:
     np.testing.assert_almost_equal(i1.get_firing_rate(.05), steady_state, 12)
+
+
 
     
 if __name__ == "__main__":          # pragma: no cover 
-    # test_zmq_callback()             # pragma: no cover
-    # test_basic()                    # pragma: no cover
-    # test_tau_normal()               # pragma: no cover
-    # test_p0()                       # pragma: no cover
-    # test_weight()                   # pragma: no cover
-    # test_drive()                    # pragma: no cover
+    test_zmq_callback()             # pragma: no cover
+    test_basic()                    # pragma: no cover
+    test_tau_normal()               # pragma: no cover
+    test_p0()                       # pragma: no cover
+    test_weight()                   # pragma: no cover
+    test_drive()                    # pragma: no cover
     test_zmq_drive_bind_server()    # pragma: no cover
-    # test_gmres()                    # pragma: no cover
-    # test_checkpoint_simulation()    # pragma: no cover
+    test_zmq_nsyn()                 # pragma: no cover
+    test_gmres()                    # pragma: no cover
+    test_checkpoint_simulation()    # pragma: no cover
+
 

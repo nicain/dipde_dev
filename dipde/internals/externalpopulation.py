@@ -23,7 +23,7 @@ import numpy as np
 import types
 from dipde.internals import utilities as util
 import json
-from dipde.interfaces.zmq import RequestFiringRate
+from dipde.interfaces.zmq import RequestConnection
 import logging
 logger = logging.getLogger(__name__)
 import numpy as np

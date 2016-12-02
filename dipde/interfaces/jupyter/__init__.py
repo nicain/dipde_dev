@@ -1,8 +1,23 @@
 import IPython.display
-from dipde.interfaces.zmq import RequestFiringRate, WidgetReplyServerThread
+from dipde.interfaces.zmq import RequestConnection, ReplyServerThread, ReplyServerBind
 from dipde.internals import ExternalPopulation
 import ipywidgets as ipw
 import types
+
+class WidgetReplyServerThread(ReplyServerThread):
+
+    def __init__(self, widget, port=None, get_value=None):
+        super(WidgetReplyServerThread, self).__init__(self.reply_function)
+        self.daemon = True
+        self.get_value = None
+        self.widget = widget
+        self.server = ReplyServerBind(self.reply_function, port=port)
+
+    def reply_function(self, t):
+        if not self.get_value is None:
+            return self.get_value(self.widget, t)
+        else:
+            return self.widget.value
 
 class IntSliderInput(object):
     def __init__(self, port=None, display=True, **kwargs):
@@ -11,7 +26,7 @@ class IntSliderInput(object):
 
         self.int_slider = ipw.IntSlider(**kwargs)
         self.reply_server_thread = WidgetReplyServerThread(self.int_slider, port=port)
-        self.zmq_firing_rate_request_function = RequestFiringRate(self.port)
+        self.zmq_firing_rate_request_function = RequestConnection(self.port)
         self.population = ExternalPopulation(self.zmq_firing_rate_request_function)
 
         # Monkey patch the start function onto the initialize function

@@ -65,7 +65,7 @@ class Connection(object):
         self.original_weights = weights
         self.original_delays = delays
         
-        self.nsyn = nsyn
+        self.nsyn_input = nsyn
         self.synaptic_weight_distribution = util.discretize_if_needed(weights)
         self.weights, self.probs = self.synaptic_weight_distribution.xk, self.synaptic_weight_distribution.pk
 
@@ -83,6 +83,17 @@ class Connection(object):
         
         for key in kwargs.keys():
             assert key in ['class']
+
+    @property
+    def nsyn(self):
+        if isinstance(self.nsyn_input, (int, float)):
+            return self.nsyn_input
+        elif hasattr(self.nsyn_input, "__call__"):
+            return self.nsyn_input()
+        else:
+            print type(self.nsyn_input)
+            raise
+
 
     @property
     def source(self):
