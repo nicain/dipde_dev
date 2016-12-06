@@ -1,7 +1,7 @@
 import os
 import subprocess
 import tempfile
-import nbformat
+import nbformat 
 
 examples_dir = os.path.join(os.path.dirname(__file__), '../examples')
 
