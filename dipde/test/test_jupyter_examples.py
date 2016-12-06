@@ -1,7 +1,6 @@
 import os
 import subprocess
 import tempfile
-import time
 import nbformat
 
 examples_dir = os.path.join(os.path.dirname(__file__), '../examples')
@@ -21,8 +20,6 @@ def _notebook_run(path):
         fout.seek(0)
         nb = nbformat.read(fout, nbformat.current_nbformat)
 
-
-    print nb
     errors = [output for cell in nb.cells if "outputs" in cell
                      for output in cell["outputs"]\
                      if output.output_type == "error"]
@@ -34,4 +31,4 @@ def test_ipynb():
     # nb, errors = _notebook_run('../examples/singlepop_live.ipynb')
     assert errors == []
 
-test_ipynb()
+# test_ipynb()
