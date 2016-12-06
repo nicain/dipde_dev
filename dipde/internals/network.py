@@ -25,6 +25,12 @@ from dipde.interfaces.pandas import reorder_df_columns
 import logging
 from dipde.internals.externalpopulation import ExternalPopulation
 logger = logging.getLogger(__name__)
+import traceback
+
+class StopSimulation(RuntimeError):
+
+    def __init__(self):
+        super(StopSimulation, self).__init__()
 
 class Network(object):
     '''Initialize and run a dipde simulation.
@@ -96,6 +102,8 @@ class Network(object):
         for c in self.connection_list:
             c.simulation = self
 
+
+        self.kill_signal = False
     
     @property
     def rank(self):
@@ -107,6 +115,7 @@ class Network(object):
         except Exception as e:
             self.shutdown()
             print 'Safely Shutting down after exception...'
+            print traceback.format_exc()
             raise e
         
     def _run(self, dt, tf, t0=0., synchronization_harness=None):
@@ -221,6 +230,9 @@ class Network(object):
             c.update()
             
         self.update_callback(self)
+
+        if self.kill_signal:
+            raise StopSimulation()
         
     def to_dict(self, organization='sparse_adjacency_matrix'):
 
