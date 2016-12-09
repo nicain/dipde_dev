@@ -1,6 +1,6 @@
 name: dipde_0.2.1
 dependencies:
-  - matplotlib=1.5.*
+  - matplotlib=1.5.1
   - python=2.7.*
   - numpy=1.10.*
   - pytest=2.8.*

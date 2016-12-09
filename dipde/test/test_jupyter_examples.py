@@ -31,4 +31,4 @@ def test_ipynb():
     # nb, errors = _notebook_run('../examples/singlepop_live.ipynb')
     assert errors == []
 
-# test_ipynb()
+test_ipynb()

@@ -46,6 +46,6 @@ def test_benchmark_recurrent_singlepop(verbose=False, scale=4):
             assert result_dict_1[key] == result_dict_2[key] == result_dict_4[key]
     
 if __name__ == "__main__":                              # pragma: no cover
-    test_mpi_bare()                              # pragma: no cover
-    # test_benchmark_singlepop(verbose=True)              # pragma: no cover
+    # test_mpi_bare()                              # pragma: no cover
+    test_benchmark_singlepop(verbose=True)              # pragma: no cover
     # test_benchmark_recurrent_singlepop(verbose=True)    # pragma: no cover
