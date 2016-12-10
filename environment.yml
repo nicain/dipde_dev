@@ -5,7 +5,6 @@ dependencies:
   - numpy=1.10.*
   - pytest=2.8.*
   - pytest-cov=2.2.*
-  - setuptools=7.*
   - scipy=0.16.*
   - sympy=1.0.*
   - pandas=0.16.*
