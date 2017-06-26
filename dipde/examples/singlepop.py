@@ -22,11 +22,11 @@ from dipde.internals.externalpopulation import ExternalPopulation
 from dipde.internals.network import Network
 from dipde.internals.connection import Connection as Connection
 
-def get_network(dv=.001, update_method='exact', approx_order=None, tol=1e-8):
+def get_network(dv=.001, update_method='exact', tol=1e-14):
 
     # Create simulation:
     b1 = ExternalPopulation('100', record=True)
-    i1 = InternalPopulation(v_min=0, v_max=.02, dv=dv, update_method=update_method, approx_order=approx_order, tol=tol)
+    i1 = InternalPopulation(v_min=0, v_max=.02, dv=dv, update_method=update_method, tol=tol)
     b1_i1 = Connection(b1, i1, 1, weights=.005, delays=0.0)
     network = Network([b1, i1], [b1_i1])
 
@@ -40,11 +40,10 @@ def example(show=False, save=False):
     dv = .0001
     tf = .1
     update_method = 'approx'
-    approx_order = 1
     tol = 1e-14
     
     # Run simulation:
-    network = get_network(dv=dv, update_method=update_method, approx_order=approx_order, tol=tol)
+    network = get_network(dv=dv, update_method=update_method, tol=tol)
     network.run(dt=dt, tf=tf, t0=t0)
 
     i1 = network.population_list[1]

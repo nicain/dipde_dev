@@ -31,4 +31,5 @@ def test_ipynb():
     # nb, errors = _notebook_run('../examples/singlepop_live.ipynb')
     assert errors == []
 
-test_ipynb()
+if __name__ == "__main__":  # pragma: no cover
+    test_ipynb()            # pragma: no cover

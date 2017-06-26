@@ -10,7 +10,7 @@ def test_singlepop():
     t, y = example(show=False)
 
     np.testing.assert_almost_equal(t[5], .0005)
-    np.testing.assert_almost_equal(y[5], .00039095499999999633)
+    np.testing.assert_almost_equal(y[5], 0.00038097003623592236)
     
 def test_singlepop_sine():
     from dipde.examples.singlepop_sine import example
