@@ -60,9 +60,9 @@ def test_zmq_drive_bind_server():
         import zmq
         socket = zmq_context.socket(zmq.REQ)
         socket.connect("tcp://localhost:%s" % test_port)
-        socket.send('SHUTDOWN')
+        socket.send_string('SHUTDOWN')
         message = socket.recv()
-        assert message == 'DOWN'
+        assert message == b'DOWN'
         time.sleep(.1)
         assert reply_server_thread.is_alive() == False
 
@@ -122,8 +122,8 @@ def singlepop(steady_state, tau_m=.02, p0=((0.,),(1.,)), weights={'distribution'
     simulation.run()
     b1.plot()
     
-    i1.plot_probability_distribution()
-    i1.plot()
+    i1.plot_probability_distribution(show=False, close=True)
+    i1.plot(show=False, close=True)
     assert i1.n_edges == i1.n_bins+1 
 
     # Test steady-state:    

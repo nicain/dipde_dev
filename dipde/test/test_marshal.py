@@ -6,7 +6,7 @@ from dipde.internals.network import Network
 from dipde.internals.simulation import Simulation
 from dipde.internals.simulationconfiguration import SimulationConfiguration
 from dipde.internals.connection import Connection as Connection
-import StringIO
+import io
 
 def test_restart_interal():
 
@@ -35,9 +35,9 @@ def test_restart_interal():
     for y1, y2 in zip(i1.firing_rate_record, i3.firing_rate_record):
         np.testing.assert_almost_equal(y1, y2, 8) 
 
-    b3.to_json(StringIO.StringIO())
-    i3.to_json(StringIO.StringIO())
-    b1_i1.to_json(StringIO.StringIO())
+    b3.to_json(io.StringIO())
+    i3.to_json(io.StringIO())
+    b1_i1.to_json(io.StringIO())
     
 def test_marshal_connection():
     c = Connection(0, 1, 1, weights=.005, delays=.005)
@@ -77,7 +77,7 @@ def test_marshal_simulation():
     for y1i, y2i in zip(y1, y2):
         np.testing.assert_almost_equal(y1i, y2i, 12)
         
-    simulation_full.to_json(StringIO.StringIO())
+    simulation_full.to_json(io.StringIO())
     
 
 def test_json_network():
@@ -86,12 +86,12 @@ def test_json_network():
     
     network = get_network()
     network.to_json()
-    network.to_json(StringIO.StringIO())
+    network.to_json(io.StringIO())
 
 def test_simulation_configuration():
     sc = SimulationConfiguration(dt=.001, tf=.01, t0=0)
     sc.to_json()
-    sc.to_json(StringIO.StringIO())
+    sc.to_json(io.StringIO())
     
     s = Simulation(simulation_configuration=sc)
     assert s.t0 == sc.t0

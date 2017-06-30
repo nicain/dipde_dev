@@ -78,8 +78,7 @@ class Network(object):
 
 
         self.gid_dict = dict((population, ii) for ii, population in enumerate(self.population_list))
-        for key, val in self.gid_dict.items():
-            self.gid_dict[val] = key
+        self.gid_dict.update({v: k for k, v in self.gid_dict.items()})
         
         # Initialize:
         self.connection_distribution_collection = ConnectionDistributionCollection()

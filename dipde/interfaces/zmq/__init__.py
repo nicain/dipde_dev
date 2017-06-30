@@ -14,9 +14,7 @@ class PublishCallback(object):
         self.socket = context.socket(zmq.PUB)
         
     def __call__(self, obj):
-        message_to_send = list(self.message_callback(obj))
-        message_to_send.insert(0,"%s" % self.topic)
-        self.socket.send_multipart(map(str, message_to_send))
+        self.socket.send_json({'topic':self.topic})
         
 class PublishCallbackConnect(PublishCallback):
     
@@ -37,11 +35,11 @@ class CallbackSubscriber(object):
         self.port = port  
         self.socket = context.socket(zmq.SUB) 
         self.socket.bind("tcp://*:%s" % self.port) 
-        self.socket.setsockopt(zmq.SUBSCRIBE, 'test')
+        self.socket.setsockopt_string(zmq.SUBSCRIBE, 'test')
         
         if receive_callback is None:
             def receive_callback(received_message):
-                print received_message
+                print(received_message)
         self.receive_callback = receive_callback 
 
     def run(self):     
@@ -71,9 +69,9 @@ class RequestFiringRate(object):
         self.socket.connect("tcp://localhost:%s" % port)
         
     def __call__(self, t):
-        self.socket.send('%s' % t)
-        message = self.socket.recv_multipart()
-        return float(message[0])
+        self.socket.send_string('%s' % t)
+        message = self.socket.recv_json()
+        return float(message['data'])
     
 class ReplyFiringRateServer(object):
     
@@ -87,11 +85,13 @@ class ReplyFiringRateServer(object):
         
         while True:
             message = self.socket.recv()
-            if message == 'SHUTDOWN':
+            if message == b'SHUTDOWN':
                 break
             requested_t = float(message)
-            self.socket.send_multipart([b"%s" % self.reply_function(requested_t)])
-        self.socket.send('DOWN')
+            # print(self.reply_function(requested_t))
+            # # print ["%s" % ]
+            self.socket.send_json({'data':self.reply_function(requested_t)})
+        self.socket.send_string('DOWN')
 
 class ReplyServerThread(threading.Thread):
     def __init__(self, port, reply_function):

@@ -18,12 +18,13 @@ import bisect
 import numpy as np
 import scipy.stats as sps
 import json
-from dipde.interfaces.pandas import to_df
-from dipde.internals import utilities as util
+from ..interfaces.pandas import to_df
+from . import utilities as util
 import logging
 logger = logging.getLogger(__name__)
 import scipy.sparse as sps
 import scipy.sparse.linalg as spsla
+import functools
 
 class InternalPopulation(object):
     """Population density class
@@ -347,7 +348,7 @@ class InternalPopulation(object):
         # Compute flux:
         reduce_list = [key.threshold_flux_vector * val for key, val in self.total_input_dict.items()]
         if len(reduce_list) > 0:
-            flux_vector = reduce(np.add, reduce_list)
+            flux_vector = functools.reduce(np.add, reduce_list)
             self.curr_firing_rate = np.dot(flux_vector, self.pv)
         else:
             self.curr_firing_rate = 0.  # pragma: no cover
@@ -384,7 +385,7 @@ class InternalPopulation(object):
     def gid(self):
         return self.simulation.gid_dict[self]
     
-    def plot_probability_distribution(self, ax=None):
+    def plot_probability_distribution(self, ax=None, **kwargs):
         '''Convenience method to plot voltage distribution.
         
         Parameters
@@ -395,12 +396,22 @@ class InternalPopulation(object):
         '''
         
         import matplotlib.pyplot as plt
-        
+
+        show = kwargs.pop('show',False)
+        close = kwargs.pop('close', False)
+
         if ax == None:
             fig = plt.figure()
             ax = fig.add_subplot(1, 1, 1)
             
         ax.plot(self.edges[:-1], self.pv)
+
+        if show == True:
+            plt.show()
+
+        if close:
+            plt.close()
+
         return ax
     
     def plot(self, ax=None, **kwargs):
@@ -415,6 +426,7 @@ class InternalPopulation(object):
         
         import matplotlib.pyplot as plt
         show = kwargs.pop('show',False)
+        close = kwargs.pop('close', False)
         
         if ax == None:
             fig = plt.figure()
@@ -426,6 +438,9 @@ class InternalPopulation(object):
         ax.set_ylim(bottom=0, top=np.max(self.firing_rate_record)*1.1)
         if show == True:
             plt.show()
+
+        if close:
+            plt.close()
         
         return ax
     

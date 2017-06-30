@@ -20,7 +20,7 @@ from sympy.abc import t as sym_t
 import sympy
 import numpy as np 
 import types
-from dipde.internals import utilities as util
+from .utilities import check_metadata
 import json
 from dipde.interfaces.zmq import RequestFiringRate
 import logging
@@ -72,7 +72,7 @@ class ExternalPopulation(object):
         assert len(self.firing_rate_record) == len(self.t_record)
 
         self.record = record
-        util.check_metadata(metadata)
+        check_metadata(metadata)
         self.metadata = metadata
         
         for key in kwargs.keys():

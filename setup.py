@@ -84,7 +84,7 @@ setup(
         'License :: Apache Software License :: 2.0',
         'Natural Language :: English',
         'Operating System :: OS Independent',
-        'Programming Language :: Python :: 2.7',
+        'Programming Language :: Python :: 3.6',
         ],
     extras_require={
         'testing': ['pytest'],

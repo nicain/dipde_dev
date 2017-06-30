@@ -2,7 +2,7 @@ import re
 from dipde.internals.network import Network
 import cProfile
 import pstats
-import StringIO
+import io
 import logging as logging_module
 
 
@@ -13,7 +13,7 @@ def profile_network(network, run_dict, sort_stats='cumulative', print_stats=20, 
         
     prof = cProfile.Profile()
     prof.runcall(network.run, **run_dict)
-    stream = StringIO.StringIO()
+    stream = io.StringIO()
     p = pstats.Stats(prof, stream=stream)
     
     p.strip_dirs().sort_stats(sort_stats).print_stats(print_stats)

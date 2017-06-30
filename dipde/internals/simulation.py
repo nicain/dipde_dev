@@ -4,7 +4,7 @@ import threading
 import types
 import numpy as np
 import time
-from simulationconfiguration import SimulationConfiguration
+from .simulationconfiguration import SimulationConfiguration
 import logging
 logger = logging.getLogger(__name__)
 

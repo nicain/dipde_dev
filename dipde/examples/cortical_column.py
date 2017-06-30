@@ -13,8 +13,6 @@
 # You should have received a copy of the GNU General Public License
 # along with dipde.  If not, see <http://www.gnu.org/licenses/>.
 
-import matplotlib
-matplotlib.use('Qt4Agg')
 import copy
 import matplotlib.pyplot as plt
 from dipde.internals.internalpopulation import InternalPopulation
@@ -124,10 +122,10 @@ def get_network(dv = .0001):
             connection_list.append(curr_connection)
     
     # Create simulation:
-    population_list = background_population_dict.values() + internal_population_dict.values()
+    population_list = list(background_population_dict.values()) + list(internal_population_dict.values())
 
     def f(n):
-        print 't:', n.t
+        print('t: %s' % n.t)
         # if n.t%.001 < 1e-10:
         #     print 't:', n.t
     network = Network(population_list, connection_list, update_callback=f)
@@ -154,7 +152,7 @@ def example(show=False, save=False, network=None):
     
     # Run simulation:
     network.run(dt=dt, tf=tf, t0=t0)
-    print 'Run Time:', network.run_time
+    print('Run Time: %s' % network.run_time)
     
     # Visualize:
     y_label_dict = {23:'2/3', 4:'4', 5:'5', 6:'6'}

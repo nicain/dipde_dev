@@ -16,7 +16,7 @@
 # along with dipde.  If not, see <http://www.gnu.org/licenses/>.
 
 import numpy as np
-from dipde.internals import utilities as util
+from . import utilities as util
 from dipde.internals import ConnectionDistribution
 from dipde.internals.externalpopulation import ExternalPopulation
 from dipde.internals.internalpopulation import InternalPopulation
