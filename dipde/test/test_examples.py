@@ -36,6 +36,13 @@ def test_excitatory_inhibitory():
 
     np.testing.assert_almost_equal(t[-1], .1)
     np.testing.assert_almost_equal(y[-1], 0.90725590501763964)
+
+def test_feedforward_exponential_distribution():
+    from dipde.examples.feedforward_exponential_distribution import example
+    t, y = example(show=False)
+
+    np.testing.assert_almost_equal(t[-1], .1)
+    np.testing.assert_almost_equal(y[-1], 27.2250799609)
     
 def test_potjans_diesmann():
     from dipde.examples.cortical_column import example
@@ -63,5 +70,5 @@ if __name__ == "__main__":                      # pragma: no cover
     # test_singlepop_recurrent()                  # pragma: no cover
     # test_singlepop_exponential_distribution()   # pragma: no cover
     # test_excitatory_inhibitory()                # pragma: no cover
-    test_potjans_diesmann()                     # pragma: no cover
-
+    # test_potjans_diesmann()                     # pragma: no cover
+    test_feedforward_exponential_distribution()

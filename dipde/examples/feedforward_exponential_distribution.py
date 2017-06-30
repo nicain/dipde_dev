@@ -64,7 +64,7 @@ def example(show=True, save=False):
         if save == True:
             plt.savefig('./singlepop_exponential_distribution.png')
 
-        print i1.firing_rate_record[len(i1.firing_rate_record) - 1]
+        print(i1.firing_rate_record[len(i1.firing_rate_record) - 1])
         plt.show()
 
     return i1.t_record, i1.firing_rate_record

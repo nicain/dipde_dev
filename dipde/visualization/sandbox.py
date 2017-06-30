@@ -22,8 +22,8 @@ network = Network([b1, i1, i2], [b1_i1, b1_i2])
 
 network.run(dt=.0001, tf=.1, t0=0)
 
-print i1.get_firing_rate(.1)
+print(i1.get_firing_rate(.1))
 
 visualize(network, show=True)
 
-print network.to_dict()
+print(network.to_dict())
