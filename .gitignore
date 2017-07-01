@@ -18,3 +18,4 @@ dipde.egg-info
 .project
 .pydevproject
 *.pyc
+conda/build
